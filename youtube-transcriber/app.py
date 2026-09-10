@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from downloader import download_audio, get_video_info
 from transcriber import transcribe_audio_file
 
-app = FastAPI(title="YouTube Audio Transcriber", version="1.0.0")
+app = FastAPI(title="YouTube Audio Transcriber", version="1.1.0")
 
 # CORS 활성화
 app.add_middleware(
@@ -72,7 +72,7 @@ async def fetch_video_info(req: URLRequest):
 async def process_transcribe(req: URLRequest):
     """
     1. 유튜브 영상에서 오디오 다운로드
-    2. Gemini STT 모델로 텍스트 전사
+    2. Gemini 모델로 한국어 트랜스크립트 및 영어 발화 전용 트랜스크립트 동시 추출
     3. 결과 반환
     """
     url = req.url.strip()
@@ -88,25 +88,37 @@ async def process_transcribe(req: URLRequest):
         print(f"다운로드 실패: {e}")
         raise HTTPException(status_code=500, detail=f"오디오 다운로드 실패: {str(e)}")
 
-    # 2. Gemini STT 전사
+    # 2. Gemini STT 전사 (한국어 + 영어 발화 선별 추출)
     try:
-        print(f"[2/2] Gemini 모델로 STT 전사 분석 시작...")
+        print(f"[2/2] Gemini 모델로 한국어 및 영어 발화 STT 분석 시작...")
         stt_result = transcribe_audio_file(
             audio_path=audio_info["file_path"],
             mime_type=audio_info["mime_type"],
-            model="gemini-3.5-transcribe",
+            model="gemini-3.6-flash",
         )
         print("전사 분석 완료!")
     except Exception as e:
         print(f"STT 전사 실패: {e}")
         raise HTTPException(status_code=500, detail=f"STT 전사 실패: {str(e)}")
 
-    # 3. 전사 결과를 txt 파일로도 저장
+    # 3. 한국어 및 영어 전사 결과를 각각 txt 파일로 저장
     base_name = os.path.splitext(audio_info["file_name"])[0]
-    txt_filename = f"{base_name}.txt"
-    txt_path = os.path.join(DOWNLOADS_DIR, txt_filename)
-    with open(txt_path, "w", encoding="utf-8") as f:
-        f.write(stt_result["text"])
+
+    ko_filename = f"{base_name}_korean.txt"
+    ko_path = os.path.join(DOWNLOADS_DIR, ko_filename)
+    with open(ko_path, "w", encoding="utf-8") as f:
+        f.write(stt_result["korean"]["text"])
+
+    en_filename = f"{base_name}_english.txt"
+    en_path = os.path.join(DOWNLOADS_DIR, en_filename)
+    with open(en_path, "w", encoding="utf-8") as f:
+        f.write(stt_result["english"]["text"])
+
+    # 기존 단일 txt 파일 호환용
+    default_txt_filename = f"{base_name}.txt"
+    default_txt_path = os.path.join(DOWNLOADS_DIR, default_txt_filename)
+    with open(default_txt_path, "w", encoding="utf-8") as f:
+        f.write(stt_result["korean"]["text"])
 
     return {
         "success": True,
@@ -122,10 +134,25 @@ async def process_transcribe(req: URLRequest):
             "file_size_mb": round(audio_info["file_size_bytes"] / (1024 * 1024), 2),
         },
         "transcript": {
-            "text": stt_result["text"],
-            "char_count": stt_result["char_count"],
-            "word_count": stt_result["word_count"],
-            "txt_download_url": f"/api/download-txt/{txt_filename}",
+            # 기본값 (한국어)
+            "text": stt_result["korean"]["text"],
+            "char_count": stt_result["korean"]["char_count"],
+            "word_count": stt_result["korean"]["word_count"],
+            "txt_download_url": f"/api/download-txt/{default_txt_filename}",
+            # 한국어 전용
+            "korean": {
+                "text": stt_result["korean"]["text"],
+                "char_count": stt_result["korean"]["char_count"],
+                "word_count": stt_result["korean"]["word_count"],
+                "txt_download_url": f"/api/download-txt/{ko_filename}",
+            },
+            # 영어 발화 전용
+            "english": {
+                "text": stt_result["english"]["text"],
+                "char_count": stt_result["english"]["char_count"],
+                "word_count": stt_result["english"]["word_count"],
+                "txt_download_url": f"/api/download-txt/{en_filename}",
+            },
         },
     }
 
