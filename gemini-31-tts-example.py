@@ -3,7 +3,6 @@
 
 import mimetypes
 import os
-import re
 import struct
 from google import genai
 from google.genai import types
@@ -60,10 +59,11 @@ The tech news anchor is urgently breaking major unexpected news about Google's n
         contents=contents,
         config=generate_content_config,
     ):
-        if chunk.parts is None:
+        if not chunk.parts:
             continue
-        if chunk.parts[0].inline_data and chunk.parts[0].inline_data.data:
-            inline_data = chunk.parts[0].inline_data
+        first_part = chunk.parts[0]
+        inline_data = first_part.inline_data
+        if inline_data is not None and inline_data.data is not None:
             if inline_data.mime_type:
                 mime_type = inline_data.mime_type
             audio_bytes_chunks.extend(inline_data.data)
@@ -76,6 +76,10 @@ The tech news anchor is urgently breaking major unexpected news about Google's n
         wav_data = convert_to_wav(bytes(audio_bytes_chunks), mime_type)
         save_binary_file(output_filename, wav_data)
         print(f"✅ 오디오 파일이 하나로 성공적으로 저장되었습니다: {output_filename}")
+        
+        # 생성된 오디오 파일에 대한 STT 수행
+        output_txt = "gemini_4_news_briefing.txt"
+        transcribe_audio(client=client, audio_path=output_filename, output_txt_path=output_txt)
     else:
         print("생성된 오디오 데이터가 없습니다.")
 
@@ -119,7 +123,7 @@ def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
     )
     return header + audio_data
 
-def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
+def parse_audio_mime_type(mime_type: str) -> dict[str, int]:
     """Parses bits per sample and rate from an audio MIME type string.
 
     Assumes bits per sample is encoded like "L16" and rate as "rate=xxxxx".
@@ -128,8 +132,7 @@ def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
         mime_type: The audio MIME type string (e.g., "audio/L16;rate=24000").
 
     Returns:
-        A dictionary with "bits_per_sample" and "rate" keys. Values will be
-        integers if found, otherwise None.
+        A dictionary with "bits_per_sample" and "rate" keys. Values will be integers.
     """
     bits_per_sample = 16
     rate = 24000
@@ -152,6 +155,50 @@ def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
                 pass # Keep bits_per_sample as default if conversion fails
 
     return {"bits_per_sample": bits_per_sample, "rate": rate}
+
+
+def transcribe_audio(
+    client: genai.Client,
+    audio_path: str = "gemini_4_news_briefing.wav",
+    output_txt_path: str = "gemini_4_news_briefing.txt",
+    model: str = "gemini-3.6-flash",
+) -> str:
+    """오디오 파일을 읽어서 Gemini 모델로 텍스트 전사(STT)를 수행하고 파일로 저장합니다."""
+    if not os.path.exists(audio_path):
+        print(f"❌ 전사할 오디오 파일이 없습니다: {audio_path}")
+        return ""
+
+    print(f"\n🎤 오디오 음성 인식(STT) 진행 중... ({audio_path})")
+    with open(audio_path, "rb") as f:
+        audio_data = f.read()
+
+    prompt = (
+        "이 오디오 파일의 음성을 듣고 한국어로 정확하게 그대로 받아적어주세요(전사/STT). "
+        "감정 태그나 부가 설명 없이 오디오에 발화된 한국어 텍스트 내용만 출력하세요."
+    )
+
+    response = client.models.generate_content(
+        model=model,
+        contents=[
+            types.Part.from_bytes(data=audio_data, mime_type="audio/wav"),
+            prompt,
+        ],
+    )
+
+    transcribed_text = response.text.strip() if response.text else ""
+
+    # UTF-8 텍스트 파일로 저장
+    with open(output_txt_path, "w", encoding="utf-8") as f:
+        f.write(transcribed_text)
+
+    print("=" * 60)
+    print("📝 [STT 전사 결과]")
+    print("=" * 60)
+    print(transcribed_text)
+    print("=" * 60)
+    print(f"✅ STT 텍스트 파일이 저장되었습니다: {output_txt_path}\n")
+
+    return transcribed_text
 
 
 if __name__ == "__main__":
