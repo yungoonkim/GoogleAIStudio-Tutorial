@@ -1,10 +1,11 @@
 ﻿import glob
+import io
 import os
 import sys
 import warnings
 
-# Windows 콘솔 한글 깨짐 방지
-if sys.stdout.encoding != "utf-8":
+# Windows 콘솔 한글 깨짐 방지 (타입 체커 호환)
+if isinstance(sys.stdout, io.TextIOWrapper) and sys.stdout.encoding != "utf-8":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
     except Exception:
@@ -103,7 +104,6 @@ def select_and_transcribe():
     # 파일이 여러 개 있는 경우 -> 목록 출력 후 사용자 선택 or 전체 변환
     print(f"📁 총 {len(wav_files)}개의 .wav 파일이 발견되었습니다:\n")
     for idx, f in enumerate(wav_files, start=1):
-        mtime = os.path.getmtime(f)
         size_kb = os.path.getsize(f) / 1024
         print(f"  [{idx}] {f} ({size_kb:.1f} KB)")
     print(f"  [A] 발견된 모든 파일 전체 일괄 변환")
