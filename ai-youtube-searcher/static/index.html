@@ -1,0 +1,683 @@
+﻿<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 유튜브 검색기 | AI YouTube Searcher</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            yt: {
+              bg: '#0f0f0f',
+              card: '#181818',
+              hover: '#272727',
+              border: '#303030',
+              red: '#ff0000',
+              text: '#f1f1f1',
+              subtext: '#aaaaaa',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Pretendard:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Roboto', 'Pretendard', sans-serif;
+      background-color: #0f0f0f;
+      color: #f1f1f1;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #181818;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #3f3f3f;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #555555;
+    }
+  </style>
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body class="bg-yt-bg min-h-screen flex flex-col justify-between">
+
+  <!-- ================= 상단 헤더 (YouTube 스타일) ================= -->
+  <header class="bg-yt-bg sticky top-0 z-50 px-4 py-2.5 flex items-center justify-between border-b border-yt-border">
+    <!-- 좌측: 메뉴 & 로고 -->
+    <div class="flex items-center space-x-4">
+      <button class="p-2 text-yt-text hover:bg-yt-hover rounded-full transition-colors cursor-pointer">
+        <i class="fa-solid fa-bars text-lg"></i>
+      </button>
+      <div class="flex items-center space-x-1.5 cursor-pointer select-none" onclick="location.reload()">
+        <div class="w-8 h-6 bg-red-600 rounded-lg flex items-center justify-center text-white">
+          <i class="fa-solid fa-play text-xs ml-0.5"></i>
+        </div>
+        <span class="font-bold text-lg tracking-tighter text-white flex items-center">
+          YouTube <sup class="text-[10px] text-yt-subtext ml-1 font-semibold">AI</sup>
+        </span>
+      </div>
+    </div>
+
+    <!-- 중앙: 유튜브 검색창 스타일 URL 입력 -->
+    <div class="flex-grow max-w-2xl mx-4">
+      <form id="searchForm" onsubmit="handleSearch(event)" class="flex items-center">
+        <div class="relative flex-grow flex items-center">
+          <input 
+            type="text" 
+            id="urlInput" 
+            placeholder="유튜브 영상 링크를 입력하세요 (예: https://www.youtube.com/watch?v=...)" 
+            required
+            class="w-full bg-[#121212] border border-[#303030] text-yt-text text-sm rounded-l-full py-2.5 pl-4 pr-10 focus:border-blue-500 focus:outline-none transition-all shadow-inner"
+          >
+          <button 
+            type="button" 
+            onclick="pasteUrl()" 
+            title="클립보드 붙여넣기"
+            class="absolute right-3 text-yt-subtext hover:text-white text-xs cursor-pointer"
+          >
+            <i class="fa-regular fa-clipboard"></i>
+          </button>
+        </div>
+        <button 
+          type="submit" 
+          id="searchBtn"
+          title="검색"
+          class="bg-[#222222] border border-l-0 border-[#303030] hover:bg-yt-hover text-yt-text px-6 py-2.5 rounded-r-full transition-colors flex items-center justify-center cursor-pointer"
+        >
+          <i class="fa-solid fa-magnifying-glass text-sm"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- 우측: 프로필 / 모델 정보 (마이크, 만들기, 알림 제외) -->
+    <div class="flex items-center space-x-3">
+      <span class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+        Gemini 3.5 & 3.8
+      </span>
+      <div class="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center select-none shadow">
+        AI
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= 메인 콘텐츠 영역 ================= -->
+  <main class="flex-grow p-4 lg:p-6 max-w-[1700px] mx-auto w-full">
+
+    <!-- 상태 알림 / 진행률 바 -->
+    <div id="statusAlert" class="hidden mb-4 p-4 rounded-xl bg-yt-card border border-yt-border flex items-center space-x-3">
+      <div class="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+      <div class="flex-grow text-xs">
+        <p id="statusTitle" class="font-bold text-yt-text">영상 및 오디오 분석 중...</p>
+        <p id="statusDesc" class="text-yt-subtext mt-0.5">Gemini 3.5 Transcribe 모델이 타임스탬프를 추출하고 있습니다.</p>
+      </div>
+    </div>
+
+    <!-- 영상 미입력 초기 안내 화면 -->
+    <div id="emptyPlaceholder" class="text-center py-20">
+      <div class="w-20 h-20 rounded-full bg-yt-card border border-yt-border mx-auto flex items-center justify-center text-red-500 text-3xl mb-4">
+        <i class="fa-solid fa-film"></i>
+      </div>
+      <h2 class="text-xl font-bold text-yt-text mb-2">상단 검색창에 유튜브 링크를 입력해 주세요</h2>
+      <p class="text-sm text-yt-subtext max-w-md mx-auto mb-6">
+        영상이 로드되면 음성에서 타임스탬프를 자동 추출하고, 특정 대사를 검색하거나 Gemini 3.8 Flash에게 질문하여 원하는 장면으로 즉시 이동할 수 있습니다.
+      </p>
+      <div class="flex justify-center space-x-2">
+        <button 
+          onclick="loadSampleVideo('https://www.youtube.com/watch?v=X2m-08cVLmg')" 
+          class="px-4 py-2 bg-yt-hover hover:bg-yt-border border border-yt-border rounded-xl text-xs text-yt-text font-medium transition-colors cursor-pointer"
+        >
+          🎬 영화 예고편 샘플 불러오기
+        </button>
+      </div>
+    </div>
+
+    <!-- 영상 및 어시스턴트 메인 레이아웃 (좌측 영상 + 우측 AI 패널) -->
+    <div id="contentLayout" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- ================= 좌측: 비디오 플레이어 & 컨트롤 ================= -->
+      <div class="lg:col-span-8 space-y-4">
+        
+        <!-- 유튜브 IFrame 임베드 컨테이너 -->
+        <div class="w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl border border-yt-border relative group">
+          <div id="player" class="w-full h-full"></div>
+        </div>
+
+        <!-- 커스텀 플레이어 컨트롤바 (음향 크기 조절 등) -->
+        <div class="bg-yt-card border border-yt-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-4">
+          
+          <!-- 재생/일시정지 & 시간 -->
+          <div class="flex items-center space-x-3">
+            <button 
+              id="playPauseBtn" 
+              onclick="togglePlay()" 
+              class="w-9 h-9 rounded-full bg-yt-hover hover:bg-[#383838] flex items-center justify-center text-yt-text transition-colors cursor-pointer"
+              title="재생/일시정지"
+            >
+              <i id="playIcon" class="fa-solid fa-play text-sm"></i>
+            </button>
+            <span id="timeDisplay" class="text-xs font-mono text-yt-subtext">
+              00:00 / 00:00
+            </span>
+          </div>
+
+          <!-- 음향(볼륨) 크기 조절 슬라이더 -->
+          <div class="flex items-center space-x-2">
+            <button 
+              id="muteBtn" 
+              onclick="toggleMute()" 
+              class="text-yt-subtext hover:text-white transition-colors cursor-pointer"
+              title="음소거"
+            >
+              <i id="volumeIcon" class="fa-solid fa-volume-high text-sm"></i>
+            </button>
+            <input 
+              type="range" 
+              id="volumeSlider" 
+              min="0" 
+              max="100" 
+              value="100" 
+              oninput="handleVolumeChange(this.value)"
+              class="w-24 sm:w-32 accent-red-600 bg-yt-border h-1.5 rounded-lg cursor-pointer"
+            >
+            <span id="volumeValue" class="text-xs font-mono text-yt-subtext w-8 text-right">100%</span>
+          </div>
+
+          <!-- 키워드 빠른 검색창 (특정 위치로 바로 이동) -->
+          <div class="flex-grow max-w-xs relative flex items-center">
+            <input 
+              type="text" 
+              id="quickSearchInput" 
+              placeholder="대사/단어 검색 (즉시 점프)..." 
+              onkeydown="if(event.key==='Enter') executeQuickSearch()"
+              class="w-full bg-[#121212] border border-yt-border text-yt-text text-xs rounded-lg py-2 pl-3 pr-8 focus:border-red-500 focus:outline-none transition-colors"
+            >
+            <button 
+              onclick="executeQuickSearch()" 
+              class="absolute right-2 text-yt-subtext hover:text-white text-xs cursor-pointer"
+            >
+              <i class="fa-solid fa-location-crosshairs"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 영상 메타데이터 정보 -->
+        <div class="bg-yt-card border border-yt-border rounded-xl p-4 space-y-2">
+          <h1 id="videoTitle" class="text-base sm:text-lg font-bold text-yt-text leading-snug">영상 제목</h1>
+          <div class="flex items-center justify-between text-xs text-yt-subtext pt-1 border-t border-yt-border">
+            <span id="videoUploader" class="font-medium text-yt-text flex items-center">
+              <i class="fa-regular fa-circle-user mr-1.5 text-red-500"></i>채널명
+            </span>
+            <span id="videoDuration">재생시간: 00:00</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= 우측: AI 사이드바 (타임라인 & Q&A) ================= -->
+      <div class="lg:col-span-4 bg-yt-card border border-yt-border rounded-2xl flex flex-col h-[650px] shadow-xl overflow-hidden">
+        
+        <!-- 탭 네비게이션 헤더 -->
+        <div class="flex border-b border-yt-border bg-[#141414]">
+          <button 
+            id="tabScriptBtn" 
+            onclick="switchTab('script')" 
+            class="flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+          >
+            <i class="fa-solid fa-list-ul"></i>
+            <span>타임라인 스크립트</span>
+          </button>
+          <button 
+            id="tabQaBtn" 
+            onclick="switchTab('qa')" 
+            class="flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-yt-subtext hover:text-yt-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i>
+            <span>Gemini 3.8 Q&A</span>
+          </button>
+        </div>
+
+        <!-- ================= 탭 1: 타임라인 스크립트 리스트 ================= -->
+        <div id="scriptPanel" class="flex-grow flex flex-col p-3 overflow-hidden">
+          <div class="text-[11px] text-yt-subtext mb-2 px-1 flex items-center justify-between">
+            <span>💡 문장을 클릭하면 해당 시간으로 이동 및 자동 재생됩니다.</span>
+            <span id="segmentCount" class="font-semibold text-white">0개</span>
+          </div>
+
+          <div id="transcriptList" class="flex-grow overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+            <!-- 자바스크립트로 동적 세그먼트 주입 -->
+            <div class="text-center py-10 text-yt-subtext text-xs">
+              타임스탬프를 분석하는 중입니다...
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= 탭 2: Gemini 3.8 Flash Q&A 대화창 ================= -->
+        <div id="qaPanel" class="hidden flex-grow flex flex-col p-3 overflow-hidden">
+          
+          <!-- 메시지 스크롤 영역 -->
+          <div id="chatMessages" class="flex-grow overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+            <div class="bg-yt-hover border border-yt-border p-3 rounded-xl text-xs text-yt-text leading-relaxed">
+              👋 안녕하세요! 영상의 타임스탬프와 전체 내용을 분석했습니다.<br>
+              "어떤 장면이 언제 나와?", "내용을 3줄로 요약해줘" 등 궁금한 점을 물어보시면 시간대 링크와 함께 알려드립니다.
+            </div>
+          </div>
+
+          <!-- 질문 입력 폼 -->
+          <form onsubmit="handleQaSubmit(event)" class="mt-3 pt-2 border-t border-yt-border flex items-center space-x-2">
+            <input 
+              type="text" 
+              id="qaInput" 
+              placeholder="영상 내용에 대해 질문하세요..." 
+              required
+              class="flex-grow bg-[#121212] border border-yt-border text-yt-text text-xs rounded-xl py-2.5 px-3 focus:border-emerald-500 focus:outline-none transition-colors"
+            >
+            <button 
+              type="submit" 
+              id="qaSendBtn"
+              class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold rounded-xl text-xs transition-colors cursor-pointer flex items-center space-x-1"
+            >
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- 푸터 -->
+  <footer class="bg-yt-bg border-t border-yt-border py-3 text-center text-xs text-yt-subtext">
+    AI YouTube Searcher &copy; 2026. Built with YouTube Iframe API & Google Gemini 3.5/3.8 Flash.
+  </footer>
+
+  <!-- ================= 자바스크립트 로직 ================= -->
+  <script>
+    let player = null;
+    let isPlayerReady = false;
+    let currentVideoId = '';
+    let currentSegments = [];
+    let currentVideoTitle = '';
+    let timeUpdateInterval = null;
+
+    // YouTube IFrame API 준비 완료 콜백
+    function onYouTubeIframeAPIReady() {
+      console.log("YouTube IFrame API Ready");
+    }
+
+    function initPlayer(videoId) {
+      if (player) {
+        player.loadVideoById(videoId);
+        return;
+      }
+
+      player = new YT.Player('player', {
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          controls: 1,
+          rel: 0,
+          modestbranding: 1
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
+
+    function onPlayerReady(event) {
+      isPlayerReady = true;
+      event.target.playVideo();
+      startTimeTracker();
+    }
+
+    function onPlayerStateChange(event) {
+      const playIcon = document.getElementById('playIcon');
+      if (event.data === YT.PlayerState.PLAYING) {
+        playIcon.className = "fa-solid fa-pause text-sm";
+      } else {
+        playIcon.className = "fa-solid fa-play text-sm";
+      }
+    }
+
+    function startTimeTracker() {
+      if (timeUpdateInterval) clearInterval(timeUpdateInterval);
+      timeUpdateInterval = setInterval(() => {
+        if (!player || !isPlayerReady) return;
+        try {
+          const current = Math.floor(player.getCurrentTime() || 0);
+          const total = Math.floor(player.getDuration() || 0);
+          document.getElementById('timeDisplay').textContent = `${formatTime(current)} / ${formatTime(total)}`;
+          highlightCurrentSegment(current);
+        } catch (e) {}
+      }, 500);
+    }
+
+    function formatTime(secs) {
+      const m = Math.floor(secs / 60);
+      const s = Math.floor(secs % 60);
+      return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    // 재생 및 일시정지
+    function togglePlay() {
+      if (!player || !isPlayerReady) return;
+      const state = player.getPlayerState();
+      if (state === YT.PlayerState.PLAYING) {
+        player.pauseVideo();
+      } else {
+        player.playVideo();
+      }
+    }
+
+    // 음향(볼륨) 조절
+    function handleVolumeChange(val) {
+      if (!player || !isPlayerReady) return;
+      player.setVolume(val);
+      document.getElementById('volumeValue').textContent = `${val}%`;
+      const volIcon = document.getElementById('volumeIcon');
+      if (val == 0) {
+        volIcon.className = "fa-solid fa-volume-xmark text-sm";
+      } else if (val < 50) {
+        volIcon.className = "fa-solid fa-volume-low text-sm";
+      } else {
+        volIcon.className = "fa-solid fa-volume-high text-sm";
+      }
+    }
+
+    function toggleMute() {
+      if (!player || !isPlayerReady) return;
+      if (player.isMuted()) {
+        player.unMute();
+        handleVolumeChange(player.getVolume());
+      } else {
+        player.mute();
+        document.getElementById('volumeIcon').className = "fa-solid fa-volume-xmark text-sm";
+        document.getElementById('volumeValue').textContent = "0%";
+      }
+    }
+
+    // 특정 시간으로 점프하고 영상 자동 재생
+    function jumpToTime(seconds) {
+      if (!player || !isPlayerReady) return;
+      player.seekTo(seconds, true);
+      player.playVideo();
+      console.log(`Jump to: ${seconds}s and auto-playing`);
+    }
+
+    // 클립보드 붙여넣기
+    async function pasteUrl() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) document.getElementById('urlInput').value = text;
+      } catch (err) {
+        alert('클립보드 접근 권한이 필요합니다.');
+      }
+    }
+
+    // 샘플 링크 로드
+    function loadSampleVideo(sampleUrl) {
+      document.getElementById('urlInput').value = sampleUrl;
+      handleSearch(new Event('submit'));
+    }
+
+    // 검색 실행 (오디오 다운로드 + STT 전사 파이프라인)
+    async function handleSearch(e) {
+      if (e) e.preventDefault();
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) return;
+
+      const statusAlert = document.getElementById('statusAlert');
+      const emptyPlaceholder = document.getElementById('emptyPlaceholder');
+      const contentLayout = document.getElementById('contentLayout');
+      const searchBtn = document.getElementById('searchBtn');
+
+      searchBtn.disabled = true;
+      statusAlert.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/api/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: url })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "영상 분석에 실패했습니다.");
+
+        emptyPlaceholder.classList.add('hidden');
+        contentLayout.classList.remove('hidden');
+
+        currentVideoId = data.video.id;
+        currentVideoTitle = data.video.title;
+        currentSegments = data.segments || [];
+
+        // 영상 메타 세팅
+        document.getElementById('videoTitle').textContent = data.video.title;
+        document.getElementById('videoUploader').innerHTML = `<i class="fa-regular fa-circle-user mr-1.5 text-red-500"></i>${data.video.uploader}`;
+        document.getElementById('videoDuration').textContent = `재생시간: ${data.video.duration_str}`;
+
+        // 유튜브 플레이어 생성/로드
+        initPlayer(currentVideoId);
+
+        // 스크립트 렌더링
+        renderTranscript(currentSegments);
+
+        statusAlert.classList.add('hidden');
+      } catch (err) {
+        alert(err.message);
+        statusAlert.classList.add('hidden');
+      } finally {
+        searchBtn.disabled = false;
+      }
+    }
+
+    // 트랜스크립트 렌더링
+    function renderTranscript(segments) {
+      const container = document.getElementById('transcriptList');
+      document.getElementById('segmentCount').textContent = `${segments.length}개`;
+
+      if (!segments || segments.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-yt-subtext text-xs">추출된 발화 내용이 없습니다.</div>';
+        return;
+      }
+
+      container.innerHTML = segments.map((seg, idx) => `
+        <div 
+          id="seg-${seg.start}" 
+          onclick="jumpToTime(${seg.start})" 
+          class="segment-item p-2.5 rounded-xl hover:bg-yt-hover transition-all cursor-pointer flex items-start space-x-2.5 group border border-transparent hover:border-yt-border"
+        >
+          <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-400 group-hover:bg-blue-900 group-hover:text-blue-300 font-mono text-xs font-semibold select-none flex-shrink-0">
+            ${seg.time}
+          </span>
+          <p class="text-xs text-yt-text group-hover:text-white leading-relaxed line-clamp-3">
+            ${escapeHtml(seg.text)}
+          </p>
+        </div>
+      `).join('');
+    }
+
+    // 현재 시간에 맞춘 세그먼트 하이라이트
+    let lastHighlightedSec = -1;
+    function highlightCurrentSegment(currentSec) {
+      if (!currentSegments || currentSegments.length === 0) return;
+      let targetSec = -1;
+      for (let i = 0; i < currentSegments.length; i++) {
+        if (currentSegments[i].start <= currentSec) {
+          targetSec = currentSegments[i].start;
+        } else {
+          break;
+        }
+      }
+
+      if (targetSec !== -1 && targetSec !== lastHighlightedSec) {
+        document.querySelectorAll('.segment-item').forEach(el => el.classList.remove('bg-yt-hover', 'border-blue-500/50'));
+        const el = document.getElementById(`seg-${targetSec}`);
+        if (el) {
+          el.classList.add('bg-yt-hover', 'border-blue-500/50');
+        }
+        lastHighlightedSec = targetSec;
+      }
+    }
+
+    // 키워드 빠른 검색 및 자동 점프
+    function executeQuickSearch() {
+      const query = document.getElementById('quickSearchInput').value.trim().toLowerCase();
+      if (!query || currentSegments.length === 0) return;
+
+      const found = currentSegments.find(s => s.text.toLowerCase().includes(query));
+      if (found) {
+        jumpToTime(found.start);
+        const el = document.getElementById(`seg-${found.start}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        alert(`'${query}'에 해당하는 대사를 찾을 수 없습니다.`);
+      }
+    }
+
+    // 탭 전환
+    function switchTab(tab) {
+      const tabScriptBtn = document.getElementById('tabScriptBtn');
+      const tabQaBtn = document.getElementById('tabQaBtn');
+      const scriptPanel = document.getElementById('scriptPanel');
+      const qaPanel = document.getElementById('qaPanel');
+
+      if (tab === 'script') {
+        tabScriptBtn.className = "flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
+        tabQaBtn.className = "flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-yt-subtext hover:text-yt-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
+        scriptPanel.classList.remove('hidden');
+        qaPanel.classList.add('hidden');
+      } else {
+        tabQaBtn.className = "flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
+        tabScriptBtn.className = "flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-yt-subtext hover:text-yt-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
+        qaPanel.classList.remove('hidden');
+        scriptPanel.classList.add('hidden');
+      }
+    }
+
+    // Gemini 3.8 Flash Q&A 전송 처리
+    async function handleQaSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('qaInput');
+      const query = input.value.trim();
+      if (!query || currentSegments.length === 0) return;
+
+      const chatContainer = document.getElementById('chatMessages');
+      const sendBtn = document.getElementById('qaSendBtn');
+
+      // 사용자 말풍선 추가
+      chatContainer.innerHTML += `
+        <div class="flex justify-end">
+          <div class="bg-blue-600 text-white p-3 rounded-xl text-xs max-w-[85%] leading-relaxed shadow">
+            ${escapeHtml(query)}
+          </div>
+        </div>
+      `;
+      input.value = '';
+      sendBtn.disabled = true;
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      // AI 로딩 말풍선
+      const loadingId = 'loading-' + Date.now();
+      chatContainer.innerHTML += `
+        <div id="${loadingId}" class="flex justify-start">
+          <div class="bg-yt-hover border border-yt-border text-yt-subtext p-3 rounded-xl text-xs flex items-center space-x-2">
+            <div class="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+            <span>Gemini 3.8 Flash가 생각 중입니다...</span>
+          </div>
+        </div>
+      `;
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      try {
+        const res = await fetch('/api/qa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: query,
+            video_title: currentVideoTitle,
+            segments: currentSegments
+          })
+        });
+
+        const data = await res.json();
+        document.getElementById(loadingId).remove();
+
+        if (!res.ok) throw new Error(data.detail || "답변을 가져오지 못했습니다.");
+
+        const answer = data.data.answer;
+        const jumpSec = data.data.jump_sec;
+
+        // [MM:SS] 타임스탬프를 클릭 가능한 점프 버튼으로 파싱
+        const formattedAnswer = answer.replace(/\[?(\d{1,2}):(\d{2})\]?/g, (match, m, s) => {
+          const sec = parseInt(m) * 60 + parseInt(s);
+          return `<button onclick="jumpToTime(${sec})" class="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded bg-blue-900/60 hover:bg-blue-800 text-blue-300 font-mono text-[11px] font-semibold cursor-pointer select-none">▶ ${m}:${s}</button>`;
+        });
+
+        chatContainer.innerHTML += `
+          <div class="flex justify-start">
+            <div class="bg-yt-hover border border-yt-border text-yt-text p-3 rounded-xl text-xs max-w-[90%] leading-relaxed space-y-2">
+              <div class="flex items-center space-x-1.5 text-emerald-400 font-semibold text-[11px] mb-1">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Gemini 3.8 Flash</span>
+              </div>
+              <div>${formattedAnswer}</div>
+              ${jumpSec !== null ? `
+                <div class="pt-2 border-t border-yt-border">
+                  <button onclick="jumpToTime(${jumpSec})" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-play text-[10px]"></i>
+                    <span>해당 장면으로 바로 이동 (${data.data.jump_time})</span>
+                  </button>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // 만약 AI가 시간대를 찾았다면 바로 이동 안내
+        if (jumpSec !== null) {
+          jumpToTime(jumpSec);
+        }
+
+      } catch (err) {
+        document.getElementById(loadingId).remove();
+        chatContainer.innerHTML += `
+          <div class="flex justify-start">
+            <div class="bg-red-950/60 border border-red-800 text-red-300 p-3 rounded-xl text-xs max-w-[85%]">
+              ❌ 오류: ${escapeHtml(err.message)}
+            </div>
+          </div>
+        `;
+      } finally {
+        sendBtn.disabled = false;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

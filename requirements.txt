@@ -1,0 +1,11 @@
+﻿# Google Gemini API & Audio/TTS/STT SDK
+google-genai>=2.22.0
+
+# YouTube Audio Downloader
+yt-dlp>=2026.8.19
+
+# Web Application Framework
+fastapi>=0.141.1
+uvicorn[standard]>=0.52.4
+python-multipart>=0.0.32
+pydantic>=2.13.5
