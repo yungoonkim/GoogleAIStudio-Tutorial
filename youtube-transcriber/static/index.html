@@ -44,21 +44,21 @@
 <body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-between">
 
   <!-- 네비게이션 헤더 -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
-    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-md shadow-red-200">
           <i class="fa-brands fa-youtube text-xl"></i>
         </div>
         <div>
           <h1 class="text-lg font-bold text-slate-900 leading-tight">YouTube Audio Transcriber</h1>
-          <p class="text-xs text-slate-500 font-medium">Powered by Google Gemini 3.5 STT</p>
+          <p class="text-xs text-slate-500 font-medium">한국어 & 영어 발화 듀얼 STT (Powered by Gemini)</p>
         </div>
       </div>
       <div class="flex items-center space-x-2">
         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
           <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
-          Gemini Ready
+          Gemini 3.6 Flash
         </span>
       </div>
     </div>
@@ -70,10 +70,10 @@
     <!-- Hero 소개 -->
     <div class="text-center max-w-2xl mx-auto mb-8">
       <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
-        유튜브 영상에서 오디오와 텍스트를 한 번에
+        유튜브 오디오 추출 및 <span class="text-red-600">한국어 + 영어</span> 트랜스크립트
       </h2>
       <p class="text-slate-600 text-sm sm:text-base">
-        유튜브 링크만 넣으면 고음질 오디오 스트림을 추출하고, 최신 Gemini STT 모델이 발화 내용을 정확하게 받아적어 드립니다.
+        유튜브 링크만 넣으면 고음질 오디오를 다운로드하고, 전체 한국어 대화는 물론 <strong>영어 음성만 따로 모은 트랜스크립트</strong>까지 한 번에 생성합니다.
       </p>
     </div>
 
@@ -104,8 +104,8 @@
 
         <div class="flex flex-col sm:flex-row items-center justify-between pt-2 gap-3">
           <div class="flex items-center text-xs text-slate-500 space-x-2">
-            <i class="fa-regular fa-circle-question"></i>
-            <span>일반 영상, Shorts, 실시간 스트림 아카이브 모두 지원합니다.</span>
+            <i class="fa-solid fa-language text-indigo-500"></i>
+            <span>분석 완료 시 <b>한국어 트랜스크립트</b>와 <b>영어 발화 모음</b> 2가지가 모두 제공됩니다.</span>
           </div>
           <button 
             type="submit" 
@@ -125,7 +125,7 @@
         <div class="w-14 h-14 border-4 border-red-200 border-t-red-600 rounded-full animate-spin"></div>
         <div>
           <h3 id="loadingTitle" class="text-base font-bold text-slate-800">작업을 시작하고 있습니다...</h3>
-          <p id="loadingDesc" class="text-xs text-slate-500 mt-1">유튜브 서버에서 오디오 스트림을 안전하게 다운로드 중입니다.</p>
+          <p id="loadingDesc" class="text-xs text-slate-500 mt-1">유튜브 서버에서 고음질 오디오 스트림을 안전하게 다운로드 중입니다.</p>
         </div>
         <div class="w-full max-w-md bg-slate-100 rounded-full h-2 overflow-hidden mt-2">
           <div id="progressBar" class="bg-red-500 h-full w-1/3 transition-all duration-700 animate-pulse"></div>
@@ -175,28 +175,42 @@
         </div>
       </div>
 
-      <!-- 트랜스크립트 뷰어 카드 -->
+      <!-- 트랜스크립트 뷰어 카드 (탭 UI) -->
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+        
+        <!-- 상단 헤더 및 언어 선택 탭 -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-4">
           <div class="flex items-center space-x-2">
-            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <i class="fa-solid fa-file-lines"></i>
-            </div>
-            <div>
-              <h4 class="font-bold text-slate-900 text-base">추출된 트랜스크립트</h4>
-              <div class="flex items-center space-x-2 text-xs text-slate-500">
-                <span id="resCharCount">0자</span>
-                <span>•</span>
-                <span id="resWordCount">0단어</span>
-              </div>
+            <!-- 탭 버튼 모음 -->
+            <div class="inline-flex p-1 bg-slate-100 rounded-xl space-x-1">
+              <button 
+                id="tabKoBtn" 
+                onclick="switchTab('korean')"
+                class="px-4 py-2 rounded-lg text-xs font-bold transition-all bg-white text-slate-900 shadow-sm flex items-center space-x-1.5 cursor-pointer"
+              >
+                <span>🇰🇷 한국어 트랜스크립트</span>
+              </button>
+              <button 
+                id="tabEnBtn" 
+                onclick="switchTab('english')"
+                class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-800 transition-all flex items-center space-x-1.5 cursor-pointer"
+              >
+                <span>🇺🇸 영어 발화 모아보기</span>
+              </button>
             </div>
           </div>
           
-          <div class="flex items-center space-x-2">
+          <!-- 통계 및 액션 버튼 -->
+          <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 text-xs text-slate-500 font-medium mr-1">
+              <span id="resCharCount">0자</span>
+              <span>•</span>
+              <span id="resWordCount">0단어</span>
+            </div>
             <button 
               onclick="copyTranscript()" 
               id="copyBtn"
-              class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5"
+              class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer"
             >
               <i class="fa-regular fa-copy"></i>
               <span>전체 복사</span>
@@ -205,7 +219,7 @@
               id="downloadTxtBtn" 
               href="#" 
               download 
-              class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-sm shadow-emerald-200"
+              class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-sm shadow-emerald-200 cursor-pointer"
             >
               <i class="fa-solid fa-download"></i>
               <span>TXT 다운로드</span>
@@ -213,6 +227,13 @@
           </div>
         </div>
 
+        <!-- 영어 탭 선택 시 안내 뱃지 -->
+        <div id="enNoticeBadge" class="hidden mt-3 px-3.5 py-2 bg-blue-50 border border-blue-100 rounded-lg text-blue-700 text-xs flex items-center space-x-2">
+          <i class="fa-solid fa-circle-info text-blue-500"></i>
+          <span>영상 내에서 <strong>영어로 발화된 문장과 단어</strong>만 선별하여 시간 순서대로 모은 결과입니다.</span>
+        </div>
+
+        <!-- 트랜스크립트 텍스트 뷰어 -->
         <div class="mt-4">
           <div 
             id="transcriptContent" 
@@ -235,6 +256,9 @@
   </footer>
 
   <script>
+    let globalData = null;
+    let currentTab = 'korean';
+
     async function pasteClipboard() {
       try {
         const text = await navigator.clipboard.readText();
@@ -253,6 +277,41 @@
 
     function hideError() {
       document.getElementById('errorCard').classList.add('hidden');
+    }
+
+    function switchTab(lang) {
+      if (!globalData || !globalData.transcript) return;
+      currentTab = lang;
+
+      const tabKoBtn = document.getElementById('tabKoBtn');
+      const tabEnBtn = document.getElementById('tabEnBtn');
+      const enNoticeBadge = document.getElementById('enNoticeBadge');
+      const transcriptContent = document.getElementById('transcriptContent');
+      const resCharCount = document.getElementById('resCharCount');
+      const resWordCount = document.getElementById('resWordCount');
+      const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+
+      if (lang === 'korean') {
+        tabKoBtn.className = "px-4 py-2 rounded-lg text-xs font-bold transition-all bg-white text-slate-900 shadow-sm flex items-center space-x-1.5 cursor-pointer";
+        tabEnBtn.className = "px-4 py-2 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-800 transition-all flex items-center space-x-1.5 cursor-pointer";
+        enNoticeBadge.classList.add('hidden');
+
+        const koData = globalData.transcript.korean || { text: globalData.transcript.text, char_count: 0, word_count: 0, txt_download_url: '#' };
+        transcriptContent.textContent = koData.text;
+        resCharCount.textContent = `${koData.char_count.toLocaleString()}자`;
+        resWordCount.textContent = `${koData.word_count.toLocaleString()}단어`;
+        downloadTxtBtn.href = koData.txt_download_url;
+      } else {
+        tabEnBtn.className = "px-4 py-2 rounded-lg text-xs font-bold transition-all bg-white text-slate-900 shadow-sm flex items-center space-x-1.5 cursor-pointer";
+        tabKoBtn.className = "px-4 py-2 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-800 transition-all flex items-center space-x-1.5 cursor-pointer";
+        enNoticeBadge.classList.remove('hidden');
+
+        const enData = globalData.transcript.english || { text: '영어 발화가 없습니다.', char_count: 0, word_count: 0, txt_download_url: '#' };
+        transcriptContent.textContent = enData.text;
+        resCharCount.textContent = `${enData.char_count.toLocaleString()}자`;
+        resWordCount.textContent = `${enData.word_count.toLocaleString()}단어`;
+        downloadTxtBtn.href = enData.txt_download_url;
+      }
     }
 
     async function handleTranscribe(event) {
@@ -274,17 +333,24 @@
       loadingCard.classList.remove('hidden');
       resultCard.classList.add('hidden');
 
-      // 1단계 로딩 텍스트
+      // 1단계 로딩
       loadingTitle.textContent = "1단계: 유튜브 오디오 다운로드 중...";
-      loadingDesc.textContent = "고음질 원본 오디오 스트림(m4a/webm)을 추출하고 있습니다.";
-      progressBar.style.width = "40%";
+      loadingDesc.textContent = "고음질 원본 오디오 스트림을 추출하고 있습니다.";
+      progressBar.style.width = "30%";
 
-      // 가상 프로그레스 텍스트 전환
-      const timer = setTimeout(() => {
-        loadingTitle.textContent = "2단계: Gemini 3.5 모델로 STT 분석 중...";
-        loadingDesc.textContent = "오디오 음성을 인식하고 고품질 텍스트로 받아적고 있습니다.";
-        progressBar.style.width = "80%";
-      }, 3500);
+      // 2단계 로딩
+      const timer1 = setTimeout(() => {
+        loadingTitle.textContent = "2단계: 한국어 전체 음성 STT 전사 중...";
+        loadingDesc.textContent = "Gemini 모델이 음성을 텍스트로 정밀 분석하고 있습니다.";
+        progressBar.style.width = "65%";
+      }, 3000);
+
+      // 3단계 로딩
+      const timer2 = setTimeout(() => {
+        loadingTitle.textContent = "3단계: 영어 발화 선별 모음 추출 중...";
+        loadingDesc.textContent = "음성 중 영어로 발화된 부분만 따로 선별하여 정리하고 있습니다.";
+        progressBar.style.width = "90%";
+      }, 6000);
 
       try {
         const response = await fetch('/api/transcribe', {
@@ -293,12 +359,15 @@
           body: JSON.stringify({ url: url })
         });
 
-        clearTimeout(timer);
+        clearTimeout(timer1);
+        clearTimeout(timer2);
         const data = await response.json();
 
         if (!response.ok) {
           throw new Error(data.detail || "전사 처리 중 오류가 발생했습니다.");
         }
+
+        globalData = data;
 
         // 결과 렌더링
         progressBar.style.width = "100%";
@@ -311,17 +380,14 @@
         const audioPlayer = document.getElementById('audioPlayer');
         audioPlayer.src = data.audio.audio_url;
 
-        document.getElementById('resCharCount').textContent = `${data.transcript.char_count.toLocaleString()}자`;
-        document.getElementById('resWordCount').textContent = `${data.transcript.word_count.toLocaleString()}단어`;
-        document.getElementById('transcriptContent').textContent = data.transcript.text;
-
-        const downloadTxtBtn = document.getElementById('downloadTxtBtn');
-        downloadTxtBtn.href = data.transcript.txt_download_url;
+        // 기본 탭인 한국어로 표시
+        switchTab('korean');
 
         loadingCard.classList.add('hidden');
         resultCard.classList.remove('hidden');
       } catch (err) {
-        clearTimeout(timer);
+        clearTimeout(timer1);
+        clearTimeout(timer2);
         loadingCard.classList.add('hidden');
         showError(err.message);
       } finally {
