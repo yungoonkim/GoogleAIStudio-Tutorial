@@ -1,0 +1,349 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Audio Transcriber | Gemini STT</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Pretendard', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-between">
+
+  <!-- 네비게이션 헤더 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-md shadow-red-200">
+          <i class="fa-brands fa-youtube text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">YouTube Audio Transcriber</h1>
+          <p class="text-xs text-slate-500 font-medium">Powered by Google Gemini 3.5 STT</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+          Gemini Ready
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 컨테이너 -->
+  <main class="max-w-5xl mx-auto px-4 py-8 flex-grow w-full">
+
+    <!-- Hero 소개 -->
+    <div class="text-center max-w-2xl mx-auto mb-8">
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+        유튜브 영상에서 오디오와 텍스트를 한 번에
+      </h2>
+      <p class="text-slate-600 text-sm sm:text-base">
+        유튜브 링크만 넣으면 고음질 오디오 스트림을 추출하고, 최신 Gemini STT 모델이 발화 내용을 정확하게 받아적어 드립니다.
+      </p>
+    </div>
+
+    <!-- 입력 카드 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 mb-8">
+      <form id="transcribeForm" onsubmit="handleTranscribe(event)" class="space-y-4">
+        <div>
+          <label for="ytUrl" class="block text-sm font-semibold text-slate-700 mb-2">
+            <i class="fa-solid fa-link text-red-500 mr-1.5"></i>유튜브 영상 주소 (URL)
+          </label>
+          <div class="relative flex items-center">
+            <input 
+              type="text" 
+              id="ytUrl" 
+              placeholder="예: https://www.youtube.com/watch?v=... 또는 https://youtu.be/..." 
+              required
+              class="w-full pl-4 pr-24 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:bg-white transition-all text-sm outline-none shadow-inner"
+            >
+            <button 
+              type="button" 
+              onclick="pasteClipboard()" 
+              class="absolute right-3 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-medium transition-colors"
+            >
+              붙여넣기
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-between pt-2 gap-3">
+          <div class="flex items-center text-xs text-slate-500 space-x-2">
+            <i class="fa-regular fa-circle-question"></i>
+            <span>일반 영상, Shorts, 실시간 스트림 아카이브 모두 지원합니다.</span>
+          </div>
+          <button 
+            type="submit" 
+            id="submitBtn" 
+            class="w-full sm:w-auto px-7 py-3.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold rounded-xl text-sm transition-all shadow-md shadow-red-200 flex items-center justify-center space-x-2 cursor-pointer"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>오디오 다운로드 & 트랜스크립트 추출</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 로딩 스피너 및 진행 상태 카드 -->
+    <div id="loadingCard" class="hidden bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-sm mb-8">
+      <div class="flex flex-col items-center justify-center space-y-4">
+        <div class="w-14 h-14 border-4 border-red-200 border-t-red-600 rounded-full animate-spin"></div>
+        <div>
+          <h3 id="loadingTitle" class="text-base font-bold text-slate-800">작업을 시작하고 있습니다...</h3>
+          <p id="loadingDesc" class="text-xs text-slate-500 mt-1">유튜브 서버에서 오디오 스트림을 안전하게 다운로드 중입니다.</p>
+        </div>
+        <div class="w-full max-w-md bg-slate-100 rounded-full h-2 overflow-hidden mt-2">
+          <div id="progressBar" class="bg-red-500 h-full w-1/3 transition-all duration-700 animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 에러 메시지 알림 -->
+    <div id="errorCard" class="hidden bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-xl mb-8 flex items-start space-x-3">
+      <i class="fa-solid fa-triangle-exclamation text-lg mt-0.5 text-red-600"></i>
+      <div class="flex-grow">
+        <h4 class="font-bold text-sm">오류가 발생했습니다</h4>
+        <p id="errorMessage" class="text-xs mt-0.5"></p>
+      </div>
+      <button onclick="hideError()" class="text-red-400 hover:text-red-600 text-sm">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- 결과 영역 -->
+    <div id="resultCard" class="hidden space-y-6">
+
+      <!-- 영상 정보 및 오디오 플레이어 카드 -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div class="flex flex-col md:flex-row gap-6 items-start">
+          <div class="w-full md:w-56 flex-shrink-0 aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm relative">
+            <img id="resThumbnail" src="" alt="Thumbnail" class="w-full h-full object-cover">
+            <span id="resDuration" class="absolute bottom-2 right-2 bg-black/80 text-white text-[11px] font-semibold px-2 py-0.5 rounded">
+              00:00
+            </span>
+          </div>
+          <div class="flex-grow space-y-3 w-full">
+            <div>
+              <span id="resUploader" class="text-xs font-semibold text-red-600 uppercase tracking-wider">채널명</span>
+              <h3 id="resTitle" class="text-lg font-bold text-slate-900 mt-0.5 line-clamp-2">영상 제목이 여기에 표시됩니다</h3>
+            </div>
+            
+            <!-- 오디오 플레이어 -->
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between text-xs text-slate-600 font-medium px-1">
+                <span class="flex items-center"><i class="fa-solid fa-volume-high text-slate-400 mr-1.5"></i>추출된 오디오 재생</span>
+                <span id="resAudioSize" class="text-slate-400">0.0 MB</span>
+              </div>
+              <audio id="audioPlayer" controls class="w-full h-9 outline-none"></audio>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 트랜스크립트 뷰어 카드 -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <i class="fa-solid fa-file-lines"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-900 text-base">추출된 트랜스크립트</h4>
+              <div class="flex items-center space-x-2 text-xs text-slate-500">
+                <span id="resCharCount">0자</span>
+                <span>•</span>
+                <span id="resWordCount">0단어</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex items-center space-x-2">
+            <button 
+              onclick="copyTranscript()" 
+              id="copyBtn"
+              class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5"
+            >
+              <i class="fa-regular fa-copy"></i>
+              <span>전체 복사</span>
+            </button>
+            <a 
+              id="downloadTxtBtn" 
+              href="#" 
+              download 
+              class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-sm shadow-emerald-200"
+            >
+              <i class="fa-solid fa-download"></i>
+              <span>TXT 다운로드</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <div 
+            id="transcriptContent" 
+            class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto custom-scrollbar select-text font-sans"
+          >
+            트랜스크립트 내용이 여기에 표시됩니다.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- 푸터 -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+    <div class="max-w-5xl mx-auto px-4">
+      YouTube Audio Transcriber &copy; 2026. Built with FastAPI & Google Gemini API.
+    </div>
+  </footer>
+
+  <script>
+    async function pasteClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('ytUrl').value = text;
+        }
+      } catch (err) {
+        alert('클립보드 접근 권한이 필요합니다.');
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('errorMessage').textContent = msg;
+      document.getElementById('errorCard').classList.remove('hidden');
+    }
+
+    function hideError() {
+      document.getElementById('errorCard').classList.add('hidden');
+    }
+
+    async function handleTranscribe(event) {
+      event.preventDefault();
+      hideError();
+
+      const url = document.getElementById('ytUrl').value.trim();
+      if (!url) return;
+
+      const submitBtn = document.getElementById('submitBtn');
+      const loadingCard = document.getElementById('loadingCard');
+      const resultCard = document.getElementById('resultCard');
+      const loadingTitle = document.getElementById('loadingTitle');
+      const loadingDesc = document.getElementById('loadingDesc');
+      const progressBar = document.getElementById('progressBar');
+
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      loadingCard.classList.remove('hidden');
+      resultCard.classList.add('hidden');
+
+      // 1단계 로딩 텍스트
+      loadingTitle.textContent = "1단계: 유튜브 오디오 다운로드 중...";
+      loadingDesc.textContent = "고음질 원본 오디오 스트림(m4a/webm)을 추출하고 있습니다.";
+      progressBar.style.width = "40%";
+
+      // 가상 프로그레스 텍스트 전환
+      const timer = setTimeout(() => {
+        loadingTitle.textContent = "2단계: Gemini 3.5 모델로 STT 분석 중...";
+        loadingDesc.textContent = "오디오 음성을 인식하고 고품질 텍스트로 받아적고 있습니다.";
+        progressBar.style.width = "80%";
+      }, 3500);
+
+      try {
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: url })
+        });
+
+        clearTimeout(timer);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "전사 처리 중 오류가 발생했습니다.");
+        }
+
+        // 결과 렌더링
+        progressBar.style.width = "100%";
+        document.getElementById('resThumbnail').src = data.video.thumbnail || '';
+        document.getElementById('resDuration').textContent = data.video.duration_str;
+        document.getElementById('resTitle').textContent = data.video.title;
+        document.getElementById('resUploader').textContent = data.video.uploader;
+        document.getElementById('resAudioSize').textContent = `${data.audio.file_size_mb} MB`;
+
+        const audioPlayer = document.getElementById('audioPlayer');
+        audioPlayer.src = data.audio.audio_url;
+
+        document.getElementById('resCharCount').textContent = `${data.transcript.char_count.toLocaleString()}자`;
+        document.getElementById('resWordCount').textContent = `${data.transcript.word_count.toLocaleString()}단어`;
+        document.getElementById('transcriptContent').textContent = data.transcript.text;
+
+        const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+        downloadTxtBtn.href = data.transcript.txt_download_url;
+
+        loadingCard.classList.add('hidden');
+        resultCard.classList.remove('hidden');
+      } catch (err) {
+        clearTimeout(timer);
+        loadingCard.classList.add('hidden');
+        showError(err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+
+    async function copyTranscript() {
+      const text = document.getElementById('transcriptContent').textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        const copyBtn = document.getElementById('copyBtn');
+        const origHtml = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="fa-solid fa-check text-emerald-600"></i><span class="text-emerald-600">복사 완료!</span>';
+        setTimeout(() => {
+          copyBtn.innerHTML = origHtml;
+        }, 2000);
+      } catch (err) {
+        alert('복사에 실패했습니다.');
+      }
+    }
+  </script>
+</body>
+</html>

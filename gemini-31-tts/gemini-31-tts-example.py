@@ -26,13 +26,13 @@ def generate():
             role="user",
             parts=[
                 types.Part.from_text(text="""## Scene:
-A professional newsroom studio with high-tech breaking news alert ambiance
+                    A professional newsroom studio with high-tech breaking news alert ambiance
 
-## Sample Context:
-The tech news anchor is urgently breaking major unexpected news about Google's new AI model launch and its shockingly low price.
+                    ## Sample Context:
+                    The tech news anchor is urgently breaking major unexpected news about Google's new AI model launch and its shockingly low price.
 
-## Transcript:
-[breaking news tone] 긴급 속보입니다! 구글이 차세대 플래그십 AI 모델인 '제미나이 4.0 프로(Gemini 4.0 Pro)'를 전격 출시했습니다. [excited] 그런데 성능보다 더 전 세계를 충격에 빠뜨린 건 바로 가격인데요! 기존 모델 대비 90% 이상 폭락한 파격적인 단가로 공개되면서, 개발자 커뮤니티는 그야말로 축제 분위기입니다. [amazed] AI 업계의 치킨 게임이 본격적으로 시작된 것 같습니다."""),
+                    ## Transcript:
+                    [breaking news tone] 긴급 속보입니다! 구글이 차세대 플래그십 AI 모델인 '제미나이 4.0 프로(Gemini 4.0 Pro)'를 전격 출시했습니다. [excited] 그런데 성능보다 더 전 세계를 충격에 빠뜨린 건 바로 가격인데요! 기존 모델 대비 90% 이상 폭락한 파격적인 단가로 공개되면서, 개발자 커뮤니티는 그야말로 축제 분위기입니다. [amazed] AI 업계의 치킨 게임이 본격적으로 시작된 것 같습니다."""),
             ],
         ),
     ]
