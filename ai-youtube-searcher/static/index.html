@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko" class="dark">
 <head>
   <meta charset="UTF-8">
@@ -475,7 +475,7 @@
         initPlayer(currentVideoId);
 
         // 스크립트 렌더링
-        renderTranscript(currentSegments);
+        renderTranscript(currentSegments, data.from_cache);
 
         statusAlert.classList.add('hidden');
       } catch (err) {
@@ -487,9 +487,15 @@
     }
 
     // 트랜스크립트 렌더링
-    function renderTranscript(segments) {
+    function renderTranscript(segments, fromCache = false) {
       const container = document.getElementById('transcriptList');
-      document.getElementById('segmentCount').textContent = `${segments.length}개`;
+      const countEl = document.getElementById('segmentCount');
+      
+      if (fromCache) {
+        countEl.innerHTML = `<span class="text-emerald-400 mr-1.5"><i class="fa-solid fa-bolt"></i> CSV 캐시 로드</span>${segments.length}개`;
+      } else {
+        countEl.textContent = `${segments.length}개`;
+      }
 
       if (!segments || segments.length === 0) {
         container.innerHTML = '<div class="text-center py-8 text-yt-subtext text-xs">추출된 발화 내용이 없습니다.</div>';
