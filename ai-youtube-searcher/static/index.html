@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" class="dark">
+<html lang="ko" class="dark" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,10 +27,10 @@
         <i class="fa-solid fa-bars text-lg"></i>
       </button>
       <div class="flex items-center space-x-1.5 cursor-pointer select-none" onclick="location.reload()">
-        <div class="w-8 h-6 bg-red-600 rounded-lg flex items-center justify-center text-white">
+        <div class="w-8 h-6 theme-logo-icon rounded-lg flex items-center justify-center shadow-xs">
           <i class="fa-solid fa-play text-xs ml-0.5"></i>
         </div>
-        <span class="font-bold text-lg tracking-tighter text-white flex items-center">
+        <span class="font-bold text-lg tracking-tighter text-yt-text flex items-center">
           YouTube <sup class="text-[10px] text-yt-subtext ml-1 font-semibold">AI</sup>
         </span>
       </div>
@@ -45,13 +45,13 @@
             id="urlInput" 
             placeholder="유튜브 영상 링크를 입력하세요 (예: https://www.youtube.com/watch?v=...)" 
             required
-            class="w-full bg-[#121212] border border-[#303030] text-yt-text text-sm rounded-l-full py-2.5 pl-4 pr-10 focus:border-blue-500 focus:outline-none transition-all shadow-inner"
+            class="w-full theme-bg-input text-yt-text text-sm rounded-l-full py-2.5 pl-4 pr-10 border border-r-0 focus:outline-none transition-all shadow-inner"
           >
           <button 
             type="button" 
             onclick="pasteUrl()" 
             title="클립보드 붙여넣기"
-            class="absolute right-3 text-yt-subtext hover:text-white text-xs cursor-pointer"
+            class="absolute right-3 text-yt-subtext hover:text-yt-text text-xs cursor-pointer"
           >
             <i class="fa-regular fa-clipboard"></i>
           </button>
@@ -60,20 +60,96 @@
           type="submit" 
           id="searchBtn"
           title="검색"
-          class="bg-[#222222] border border-l-0 border-[#303030] hover:bg-yt-hover text-yt-text px-6 py-2.5 rounded-r-full transition-colors flex items-center justify-center cursor-pointer"
+          class="theme-bg-search-btn border border-l-0 text-yt-text px-6 py-2.5 rounded-r-full transition-colors flex items-center justify-center cursor-pointer"
         >
           <i class="fa-solid fa-magnifying-glass text-sm"></i>
         </button>
       </form>
     </div>
 
-    <!-- 우측: 프로필 / 모델 정보 (마이크, 만들기, 알림 제외) -->
-    <div class="flex items-center space-x-3">
-      <span class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+    <!-- 우측: 테마 변경 / 모델 정보 / 프로필 -->
+    <div class="flex items-center space-x-2.5">
+      
+      <!-- 🎨 테마 변경 버튼 & 드롭다운 -->
+      <div class="relative" id="themeMenuWrapper">
+        <button 
+          id="themeToggleBtn" 
+          onclick="toggleThemeDropdown(event)" 
+          class="h-8 sm:h-9 px-2.5 sm:px-3 rounded-full bg-yt-card hover:bg-yt-hover border border-yt-border text-yt-text text-xs font-medium flex items-center space-x-1.5 transition-all shadow-sm cursor-pointer select-none"
+          title="테마 변경 (Dark / Modern Sage / Warm Earth)"
+        >
+          <span id="currentThemeIcon" class="text-sm">🌙</span>
+          <span id="currentThemeName" class="hidden md:inline text-[11px] font-semibold">Dark</span>
+          <i class="fa-solid fa-chevron-down text-[9px] text-yt-subtext transition-transform duration-200" id="themeChevron"></i>
+        </button>
+
+        <!-- 테마 드롭다운 메뉴 -->
+        <div 
+          id="themeDropdown" 
+          class="hidden absolute right-0 mt-2 w-52 bg-yt-card/95 backdrop-blur-md border border-yt-border rounded-2xl shadow-2xl p-1.5 z-50 text-xs space-y-1 transition-all"
+        >
+          <div class="px-2.5 py-1.5 text-[10px] text-yt-subtext font-semibold uppercase tracking-wider border-b border-yt-border/50">
+            테마 선택 (Theme)
+          </div>
+          
+          <!-- 1. YouTube Dark -->
+          <button 
+            onclick="setTheme('dark')" 
+            class="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer hover:bg-yt-hover text-yt-text"
+            id="themeOpt-dark"
+          >
+            <div class="flex items-center space-x-2.5">
+              <span class="w-3.5 h-3.5 rounded-full bg-[#0f0f0f] border border-[#ff0000] flex-shrink-0"></span>
+              <div>
+                <div class="font-bold text-[12px]">YouTube Dark</div>
+                <div class="text-[10px] text-yt-subtext">오리지널 다크 & 레드</div>
+              </div>
+            </div>
+            <i class="fa-solid fa-check text-red-500 text-xs check-icon hidden"></i>
+          </button>
+
+          <!-- 2. Modern Sage (Light) -->
+          <button 
+            onclick="setTheme('sage')" 
+            class="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer hover:bg-yt-hover text-yt-text"
+            id="themeOpt-sage"
+          >
+            <div class="flex items-center space-x-2.5">
+              <span class="w-3.5 h-3.5 rounded-full bg-[#f8faf9] border border-[#1b4332] flex-shrink-0"></span>
+              <div>
+                <div class="font-bold text-[12px]">Modern Sage</div>
+                <div class="text-[10px] text-yt-subtext">펄 그레이 & 세이지 그린</div>
+              </div>
+            </div>
+            <i class="fa-solid fa-check text-emerald-600 text-xs check-icon hidden"></i>
+          </button>
+
+          <!-- 3. Warm Earth (Amber Gold) -->
+          <button 
+            onclick="setTheme('amber')" 
+            class="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer hover:bg-yt-hover text-yt-text"
+            id="themeOpt-amber"
+          >
+            <div class="flex items-center space-x-2.5">
+              <span class="w-3.5 h-3.5 rounded-full bg-[#14110f] border border-[#fbbf24] flex-shrink-0"></span>
+              <div>
+                <div class="font-bold text-[12px]">Warm Earth</div>
+                <div class="text-[10px] text-yt-subtext">에스프레소 & 앰버 골드</div>
+              </div>
+            </div>
+            <i class="fa-solid fa-check text-amber-400 text-xs check-icon hidden"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 모델 정보 뱃지 -->
+      <span class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold theme-model-badge border transition-colors">
+        <span class="w-2 h-2 rounded-full mr-1.5 animate-pulse theme-model-dot"></span>
         Gemini 3.5 & 3.8
       </span>
-      <div class="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center select-none shadow">
+
+      <!-- AI 아바타 -->
+      <div class="w-8 h-8 rounded-full theme-avatar font-bold text-xs flex items-center justify-center select-none shadow transition-colors">
         AI
       </div>
     </div>
@@ -84,7 +160,7 @@
 
     <!-- 상태 알림 / 진행률 바 -->
     <div id="statusAlert" class="hidden mb-4 p-4 rounded-xl bg-yt-card border border-yt-border flex items-center space-x-3">
-      <div class="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+      <div class="w-5 h-5 border-2 theme-primary-border border-t-transparent rounded-full animate-spin"></div>
       <div class="flex-grow text-xs">
         <p id="statusTitle" class="font-bold text-yt-text">영상 및 오디오 분석 중...</p>
         <p id="statusDesc" class="text-yt-subtext mt-0.5">Gemini 3.5 Transcribe 모델이 타임스탬프를 추출하고 있습니다.</p>
@@ -93,7 +169,7 @@
 
     <!-- 영상 미입력 초기 안내 화면 -->
     <div id="emptyPlaceholder" class="text-center py-20">
-      <div class="w-20 h-20 rounded-full bg-yt-card border border-yt-border mx-auto flex items-center justify-center text-red-500 text-3xl mb-4">
+      <div class="w-20 h-20 rounded-full bg-yt-card border border-yt-border mx-auto flex items-center justify-center theme-primary-text text-3xl mb-4">
         <i class="fa-solid fa-film"></i>
       </div>
       <h2 class="text-xl font-bold text-yt-text mb-2">상단 검색창에 유튜브 링크를 입력해 주세요</h2>
@@ -146,8 +222,8 @@
               class="w-full h-2 bg-white/20 hover:h-3 rounded-full cursor-pointer relative transition-all flex items-center"
               onclick="handleProgressClick(event)"
             >
-              <div id="progressBar" class="h-full bg-red-600 rounded-full relative w-0 transition-[width] duration-100">
-                <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-red-500 rounded-full shadow-md scale-0 group-hover:scale-100 transition-transform"></div>
+              <div id="progressBar" class="h-full theme-progress-bar rounded-full relative w-0 transition-[width] duration-100">
+                <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 theme-primary-bg rounded-full shadow-md scale-0 group-hover:scale-100 transition-transform"></div>
               </div>
             </div>
 
@@ -196,28 +272,28 @@
                   <!-- 톱니바퀴 바로 위에서 열리는 설정 팝업 메뉴 (ESC / 외부 클릭 닫기) -->
                   <div 
                     id="settingsMenu" 
-                    class="hidden absolute bottom-full right-0 mb-3 w-60 bg-[#1e1e1e]/95 backdrop-blur-md border border-[#3f3f3f] rounded-2xl shadow-2xl p-3 z-50 menu-popup text-xs space-y-3"
+                    class="hidden absolute bottom-full right-0 mb-3 w-60 bg-yt-card/95 backdrop-blur-md border border-yt-border rounded-2xl shadow-2xl p-3 z-50 menu-popup text-xs space-y-3"
                   >
                     <div class="flex items-center justify-between pb-2 border-b border-yt-border">
                       <span class="font-bold text-yt-text flex items-center">
-                        <i class="fa-solid fa-sliders text-red-500 mr-1.5"></i>영상 설정
+                        <i class="fa-solid fa-sliders theme-primary-text mr-1.5"></i>영상 설정
                       </span>
-                      <span class="text-[10px] text-yt-subtext bg-[#2b2b2b] px-1.5 py-0.5 rounded border border-[#383838]">ESC 닫기</span>
+                      <span class="text-[10px] text-yt-subtext bg-yt-hover px-1.5 py-0.5 rounded border border-yt-border">ESC 닫기</span>
                     </div>
 
                     <!-- 재생 속도 설정 -->
                     <div>
                       <div class="text-yt-subtext mb-1.5 font-medium flex items-center justify-between">
                         <span>재생 속도</span>
-                        <span id="currentSpeedLabel" class="text-white font-bold">1.0x (기본)</span>
+                        <span id="currentSpeedLabel" class="text-yt-text font-bold">1.0x (기본)</span>
                       </div>
                       <div class="grid grid-cols-3 gap-1.5">
-                        <button onclick="setSpeed(0.5)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">0.5x</button>
-                        <button onclick="setSpeed(0.75)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">0.75x</button>
-                        <button onclick="setSpeed(1.0)" class="speed-btn py-1.5 rounded-lg bg-red-600 text-white text-[11px] font-bold transition-colors">1.0x</button>
-                        <button onclick="setSpeed(1.25)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">1.25x</button>
-                        <button onclick="setSpeed(1.5)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">1.5x</button>
-                        <button onclick="setSpeed(2.0)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">2.0x</button>
+                        <button onclick="setSpeed(0.5)" class="speed-btn py-1.5 rounded-lg bg-yt-hover hover:bg-yt-border text-yt-text text-[11px] font-medium transition-colors">0.5x</button>
+                        <button onclick="setSpeed(0.75)" class="speed-btn py-1.5 rounded-lg bg-yt-hover hover:bg-yt-border text-yt-text text-[11px] font-medium transition-colors">0.75x</button>
+                        <button onclick="setSpeed(1.0)" class="speed-btn py-1.5 rounded-lg theme-primary-bg font-bold text-[11px] transition-colors shadow-sm">1.0x</button>
+                        <button onclick="setSpeed(1.25)" class="speed-btn py-1.5 rounded-lg bg-yt-hover hover:bg-yt-border text-yt-text text-[11px] font-medium transition-colors">1.25x</button>
+                        <button onclick="setSpeed(1.5)" class="speed-btn py-1.5 rounded-lg bg-yt-hover hover:bg-yt-border text-yt-text text-[11px] font-medium transition-colors">1.5x</button>
+                        <button onclick="setSpeed(2.0)" class="speed-btn py-1.5 rounded-lg bg-yt-hover hover:bg-yt-border text-yt-text text-[11px] font-medium transition-colors">2.0x</button>
                       </div>
                     </div>
 
@@ -225,11 +301,11 @@
                     <div class="pt-2 border-t border-yt-border space-y-2">
                       <label class="flex items-center justify-between cursor-pointer py-1">
                         <span class="text-yt-text text-[11px]">대사 자동 동기화 스크롤</span>
-                        <input type="checkbox" id="autoScrollCheck" checked class="accent-red-600 cursor-pointer">
+                        <input type="checkbox" id="autoScrollCheck" checked class="cursor-pointer">
                       </label>
                       <label class="flex items-center justify-between cursor-pointer py-1">
                         <span class="text-yt-text text-[11px]">구간 자동 반복</span>
-                        <input type="checkbox" id="loopCheck" onchange="toggleLoop(this.checked)" class="accent-red-600 cursor-pointer">
+                        <input type="checkbox" id="loopCheck" onchange="toggleLoop(this.checked)" class="cursor-pointer">
                       </label>
                     </div>
                   </div>
@@ -239,7 +315,7 @@
                 <button 
                   id="toggleSidebarBtn" 
                   onclick="toggleSidebar()" 
-                  class="px-3 py-1.5 rounded-lg bg-red-600/90 hover:bg-red-600 text-white flex items-center space-x-1.5 transition-colors cursor-pointer text-xs font-semibold shadow"
+                  class="px-3 py-1.5 rounded-lg theme-primary-bg flex items-center space-x-1.5 transition-colors cursor-pointer text-xs font-semibold shadow"
                   title="타임라인 스크립트창 열기/닫기"
                 >
                   <i id="toggleSidebarIcon" class="fa-solid fa-list-ul text-[11px]"></i>
@@ -268,7 +344,7 @@
           <h1 id="videoTitle" class="text-base sm:text-lg font-bold text-yt-text leading-snug">영상 제목</h1>
           <div class="flex items-center justify-between text-xs text-yt-subtext pt-1 border-t border-yt-border">
             <span id="videoUploader" class="font-medium text-yt-text flex items-center">
-              <i class="fa-regular fa-circle-user mr-1.5 text-red-500"></i>채널명
+              <i class="fa-regular fa-circle-user mr-1.5 theme-primary-text"></i>채널명
             </span>
             <span id="videoDuration">재생시간: 00:00</span>
           </div>
@@ -280,12 +356,12 @@
       <div id="sidebarCol" class="lg:col-span-4 bg-yt-card border border-yt-border rounded-2xl flex flex-col h-[650px] shadow-xl overflow-hidden transition-all duration-300">
         
         <!-- 탭 네비게이션 헤더 & 우측 닫기 버튼 -->
-        <div class="flex items-center justify-between border-b border-yt-border bg-[#141414] pr-2">
+        <div class="flex items-center justify-between border-b border-yt-border bg-yt-card pr-2">
           <div class="flex flex-grow">
             <button 
               id="tabScriptBtn" 
               onclick="switchTab('script')" 
-              class="flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+              class="flex-1 py-3 text-xs font-bold border-b-2 theme-primary-border theme-primary-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
             >
               <i class="fa-solid fa-list-ul"></i>
               <span>타임라인 스크립트</span>
@@ -303,7 +379,7 @@
           <button 
             onclick="toggleSidebar()" 
             title="스크립트 패널 닫기"
-            class="p-2 text-yt-subtext hover:text-white hover:bg-yt-hover rounded-lg transition-colors cursor-pointer text-xs ml-1"
+            class="p-2 text-yt-subtext hover:text-yt-text hover:bg-yt-hover rounded-lg transition-colors cursor-pointer text-xs ml-1"
           >
             <i class="fa-solid fa-xmark"></i>
           </button>
@@ -313,7 +389,7 @@
         <div id="scriptPanel" class="flex-grow flex flex-col p-3 overflow-hidden">
           <div class="text-[11px] text-yt-subtext mb-2 px-1 flex items-center justify-between">
             <span>💡 문장을 클릭하면 해당 시간으로 이동 및 자동 재생됩니다.</span>
-            <span id="segmentCount" class="font-semibold text-white">0개</span>
+            <span id="segmentCount" class="font-semibold text-yt-text">0개</span>
           </div>
 
           <div id="transcriptList" class="flex-grow overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
@@ -342,12 +418,12 @@
               id="qaInput" 
               placeholder="영상 내용에 대해 질문하세요..." 
               required
-              class="flex-grow bg-[#121212] border border-yt-border text-yt-text text-xs rounded-xl py-2.5 px-3 focus:border-emerald-500 focus:outline-none transition-colors"
+              class="flex-grow theme-bg-input border text-yt-text text-xs rounded-xl py-2.5 px-3 focus:outline-none transition-colors"
             >
             <button 
               type="submit" 
               id="qaSendBtn"
-              class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold rounded-xl text-xs transition-colors cursor-pointer flex items-center space-x-1"
+              class="px-4 py-2.5 theme-primary-bg font-semibold rounded-xl text-xs transition-colors cursor-pointer flex items-center space-x-1 shadow-sm"
             >
               <i class="fa-solid fa-paper-plane"></i>
             </button>

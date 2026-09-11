@@ -1,25 +1,226 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Pretendard:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Pretendard:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-body {
-  font-family: 'Roboto', 'Pretendard', sans-serif;
-  background-color: #0f0f0f;
-  color: #f1f1f1;
+/* ================= 테마 CSS 변수 정의 ================= */
+:root,
+html[data-theme="dark"] {
+  --color-bg: #0f0f0f;
+  --color-card: #181818;
+  --color-card-border: #303030;
+  --color-hover: #272727;
+  --color-border: #303030;
+  --color-border-subtle: #242424;
+  --color-text: #f1f1f1;
+  --color-subtext: #aaaaaa;
+  --color-input-bg: #121212;
+  --color-input-border: #303030;
+  --color-header-bg: #0f0f0f;
+  --color-primary: #ff0000;
+  --color-primary-hover: #cc0000;
+  --color-primary-text: #ffffff;
+  --color-accent: #ff0000;
+  --color-badge-bg: #1a2e22;
+  --color-badge-text: #34d399;
+  --color-badge-border: #065f46;
+  --color-time-badge-bg: #172554;
+  --color-time-badge-text: #60a5fa;
+  --color-active-seg-bg: #272727;
+  --color-active-seg-border: rgba(59, 130, 246, 0.6);
+  --color-scrollbar-track: #181818;
+  --color-scrollbar-thumb: #3f3f3f;
+  --color-scrollbar-thumb-hover: #555555;
+  --color-progress-track: rgba(255, 255, 255, 0.2);
+  --color-progress-bar: #ff0000;
+  --color-chat-user-bg: #2563eb;
+  --color-chat-user-text: #ffffff;
+  --color-chat-ai-bg: #272727;
+  --color-chat-ai-border: #303030;
+  --color-logo-badge: #ff0000;
+  --color-logo-badge-text: #ffffff;
+  --color-search-btn-bg: #222222;
+  --color-search-btn-hover: #2e2e2e;
 }
 
-/* 커스텀 스크롤바 스타일 */
+html[data-theme="sage"] {
+  --color-bg: #f8faf9;
+  --color-card: #ffffff;
+  --color-card-border: #e2e8e5;
+  --color-hover: #f1f5f3;
+  --color-border: #e2e8e5;
+  --color-border-subtle: #edf2ef;
+  --color-text: #111827;
+  --color-subtext: #6b7280;
+  --color-input-bg: #ffffff;
+  --color-input-border: #e2e8e5;
+  --color-header-bg: #ffffff;
+  --color-primary: #1b4332;
+  --color-primary-hover: #2d6a4f;
+  --color-primary-text: #ffffff;
+  --color-accent: #059669;
+  --color-badge-bg: #e8f3ee;
+  --color-badge-text: #1b4332;
+  --color-badge-border: #c6dfd4;
+  --color-time-badge-bg: #e8f3ee;
+  --color-time-badge-text: #1b4332;
+  --color-active-seg-bg: #f1f5f3;
+  --color-active-seg-border: #2d6a4f;
+  --color-scrollbar-track: #f1f5f3;
+  --color-scrollbar-thumb: #cbd5e1;
+  --color-scrollbar-thumb-hover: #94a3b8;
+  --color-progress-track: rgba(255, 255, 255, 0.3);
+  --color-progress-bar: #059669;
+  --color-chat-user-bg: #1b4332;
+  --color-chat-user-text: #ffffff;
+  --color-chat-ai-bg: #f1f5f3;
+  --color-chat-ai-border: #e2e8e5;
+  --color-logo-badge: #1b4332;
+  --color-logo-badge-text: #ffffff;
+  --color-search-btn-bg: #f1f5f3;
+  --color-search-btn-hover: #e2e8e5;
+}
+
+html[data-theme="amber"] {
+  --color-bg: #14110f;
+  --color-card: #1c1815;
+  --color-card-border: #332b24;
+  --color-hover: #2e2621;
+  --color-border: #332b24;
+  --color-border-subtle: #241e1a;
+  --color-text: #fdfbf7;
+  --color-subtext: #b8afa6;
+  --color-input-bg: #0d0b0a;
+  --color-input-border: #3d342d;
+  --color-header-bg: #1c1815;
+  --color-primary: #fbbf24;
+  --color-primary-hover: #f59e0b;
+  --color-primary-text: #14110f;
+  --color-accent: #34d399;
+  --color-badge-bg: #29241b;
+  --color-badge-text: #fbbf24;
+  --color-badge-border: #54463c;
+  --color-time-badge-bg: #29241b;
+  --color-time-badge-text: #fbbf24;
+  --color-active-seg-bg: #241e1a;
+  --color-active-seg-border: #fbbf24;
+  --color-scrollbar-track: #1c1815;
+  --color-scrollbar-thumb: #403730;
+  --color-scrollbar-thumb-hover: #54463c;
+  --color-progress-track: rgba(255, 255, 255, 0.25);
+  --color-progress-bar: #fbbf24;
+  --color-chat-user-bg: #d97706;
+  --color-chat-user-text: #ffffff;
+  --color-chat-ai-bg: #221d19;
+  --color-chat-ai-border: #332b24;
+  --color-logo-badge: #fbbf24;
+  --color-logo-badge-text: #14110f;
+  --color-search-btn-bg: #29231e;
+  --color-search-btn-hover: #342c26;
+}
+
+/* ================= 기본 바디 및 폰트 ================= */
+body {
+  font-family: 'Roboto', 'Pretendard', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* 헤더, 메인, 푸터, 카드 전역 트랜지션 */
+header, main, footer, div, section, aside, input, button {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* ================= 커스텀 스크롤바 ================= */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #181818;
+  background: var(--color-scrollbar-track);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #3f3f3f;
+  background: var(--color-scrollbar-thumb);
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #555555;
+  background: var(--color-scrollbar-thumb-hover);
+}
+
+/* ================= 테마 공통 클래스 ================= */
+.theme-bg-input {
+  background-color: var(--color-input-bg) !important;
+  border-color: var(--color-input-border) !important;
+}
+
+.theme-bg-search-btn {
+  background-color: var(--color-search-btn-bg) !important;
+  border-color: var(--color-input-border) !important;
+}
+
+.theme-bg-search-btn:hover {
+  background-color: var(--color-search-btn-hover) !important;
+}
+
+.theme-primary-bg {
+  background-color: var(--color-primary) !important;
+  color: var(--color-primary-text) !important;
+}
+
+.theme-primary-bg:hover {
+  background-color: var(--color-primary-hover) !important;
+}
+
+.theme-primary-text {
+  color: var(--color-primary) !important;
+}
+
+.theme-primary-border {
+  border-color: var(--color-primary) !important;
+}
+
+.theme-time-badge {
+  background-color: var(--color-time-badge-bg) !important;
+  color: var(--color-time-badge-text) !important;
+}
+
+.theme-model-badge {
+  background-color: var(--color-badge-bg) !important;
+  color: var(--color-badge-text) !important;
+  border-color: var(--color-badge-border) !important;
+}
+
+.theme-model-dot {
+  background-color: var(--color-badge-text) !important;
+}
+
+.theme-avatar {
+  background-color: var(--color-primary) !important;
+  color: var(--color-primary-text) !important;
+}
+
+.theme-logo-icon {
+  background-color: var(--color-logo-badge) !important;
+  color: var(--color-logo-badge-text) !important;
+}
+
+.theme-chat-user {
+  background-color: var(--color-chat-user-bg) !important;
+  color: var(--color-chat-user-text) !important;
+}
+
+.theme-chat-ai {
+  background-color: var(--color-chat-ai-bg) !important;
+  border-color: var(--color-chat-ai-border) !important;
+}
+
+.theme-active-seg {
+  background-color: var(--color-active-seg-bg) !important;
+  border-color: var(--color-active-seg-border) !important;
+}
+
+.theme-progress-bar {
+  background-color: var(--color-progress-bar) !important;
 }

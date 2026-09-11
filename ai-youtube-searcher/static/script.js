@@ -5,18 +5,115 @@ tailwind.config = {
     extend: {
       colors: {
         yt: {
-          bg: '#0f0f0f',
-          card: '#181818',
-          hover: '#272727',
-          border: '#303030',
-          red: '#ff0000',
-          text: '#f1f1f1',
-          subtext: '#aaaaaa',
+          bg: 'var(--color-bg)',
+          card: 'var(--color-card)',
+          hover: 'var(--color-hover)',
+          border: 'var(--color-border)',
+          red: 'var(--color-primary)',
+          text: 'var(--color-text)',
+          subtext: 'var(--color-subtext)',
         }
       }
     }
   }
 };
+
+// ================= 테마 관리 시스템 (Dark / Sage / Amber) =================
+const THEMES = {
+  dark: { name: 'Dark', icon: '🌙', desc: 'YouTube Dark' },
+  sage: { name: 'Modern Sage', icon: '🌿', desc: '세이지 & 펄 그레이' },
+  amber: { name: 'Warm Earth', icon: '🌅', desc: '에스프레소 & 앰버 골드' }
+};
+
+let currentTheme = 'dark';
+let isThemeDropdownOpen = false;
+
+function toggleThemeDropdown(event) {
+  if (event) event.stopPropagation();
+  const dropdown = document.getElementById('themeDropdown');
+  const chevron = document.getElementById('themeChevron');
+  isThemeDropdownOpen = !isThemeDropdownOpen;
+  
+  if (isThemeDropdownOpen) {
+    if (dropdown) dropdown.classList.remove('hidden');
+    if (chevron) chevron.classList.add('rotate-180');
+  } else {
+    closeThemeDropdown();
+  }
+}
+
+function closeThemeDropdown() {
+  const dropdown = document.getElementById('themeDropdown');
+  const chevron = document.getElementById('themeChevron');
+  if (dropdown) dropdown.classList.add('hidden');
+  if (chevron) chevron.classList.remove('rotate-180');
+  isThemeDropdownOpen = false;
+}
+
+function setTheme(theme) {
+  if (!THEMES[theme]) theme = 'dark';
+  currentTheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  try {
+    localStorage.setItem('yt_ai_theme', theme);
+  } catch (e) {}
+
+  // 헤더 버튼 텍스트 및 아이콘 갱신
+  const iconEl = document.getElementById('currentThemeIcon');
+  const nameEl = document.getElementById('currentThemeName');
+  if (iconEl) iconEl.textContent = THEMES[theme].icon;
+  if (nameEl) nameEl.textContent = THEMES[theme].name;
+
+  // 드롭다운 옵션 체크마크 갱신
+  ['dark', 'sage', 'amber'].forEach(t => {
+    const opt = document.getElementById(`themeOpt-${t}`);
+    if (opt) {
+      const check = opt.querySelector('.check-icon');
+      if (t === theme) {
+        opt.classList.add('bg-yt-hover', 'font-bold');
+        if (check) check.classList.remove('hidden');
+      } else {
+        opt.classList.remove('bg-yt-hover', 'font-bold');
+        if (check) check.classList.add('hidden');
+      }
+    }
+  });
+
+  // 프로그레스바 색상 갱신
+  const progressBar = document.getElementById('progressBar');
+  if (progressBar) {
+    progressBar.style.backgroundColor = `var(--color-progress-bar)`;
+  }
+
+  closeThemeDropdown();
+}
+
+function initTheme() {
+  let savedTheme = 'dark';
+  try {
+    savedTheme = localStorage.getItem('yt_ai_theme') || 'dark';
+  } catch (e) {}
+  setTheme(savedTheme);
+}
+
+// 초기 테마 로드 실행
+initTheme();
+document.addEventListener('DOMContentLoaded', initTheme);
+
+// ESC 및 바깥 클릭 시 테마 드롭다운 닫기
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && isThemeDropdownOpen) {
+    closeThemeDropdown();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('themeDropdown');
+  const btn = document.getElementById('themeToggleBtn');
+  if (isThemeDropdownOpen && menu && !menu.contains(e.target) && !btn?.contains(e.target)) {
+    closeThemeDropdown();
+  }
+});
 
 // ================= 전역 상태 변수 =================
 let player = null;
@@ -157,14 +254,14 @@ function toggleCaptions() {
       player.loadModule("captions");
       player.setOption("captions", "track", {"languageCode": "ko"});
       if (btn) {
-        btn.classList.add('text-red-500', 'bg-red-500/20');
+        btn.classList.add('theme-primary-bg');
         btn.classList.remove('text-yt-subtext', 'bg-white/10');
       }
     } else {
       player.setOption("captions", "track", {});
       player.unloadModule("captions");
       if (btn) {
-        btn.classList.remove('text-red-500', 'bg-red-500/20');
+        btn.classList.remove('theme-primary-bg');
         btn.classList.add('text-yt-subtext', 'bg-white/10');
       }
     }
@@ -184,7 +281,7 @@ function toggleSettingsMenu(event) {
   
   if (isSettingsOpen) {
     if (menu) menu.classList.remove('hidden');
-    if (gear) gear.classList.add('rotate-90', 'text-red-500');
+    if (gear) gear.classList.add('rotate-90', 'theme-primary-text');
     showOverlayBar();
     if (overlayTimeout) clearTimeout(overlayTimeout);
   } else {
@@ -196,7 +293,7 @@ function closeSettingsMenu() {
   const menu = document.getElementById('settingsMenu');
   const gear = document.getElementById('gearIcon');
   if (menu) menu.classList.add('hidden');
-  if (gear) gear.classList.remove('rotate-90', 'text-red-500');
+  if (gear) gear.classList.remove('rotate-90', 'theme-primary-text');
   isSettingsOpen = false;
   scheduleHideOverlay();
 }
@@ -210,9 +307,9 @@ function setSpeed(rate) {
   
   document.querySelectorAll('.speed-btn').forEach(btn => {
     if (btn.textContent.trim() === `${rate}x`) {
-      btn.className = "speed-btn py-1.5 rounded-lg bg-red-600 text-white text-[11px] font-bold transition-colors";
+      btn.className = "speed-btn py-1.5 rounded-lg theme-primary-bg font-bold text-[11px] transition-colors shadow-sm";
     } else {
-      btn.className = "speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors";
+      btn.className = "speed-btn py-1.5 rounded-lg bg-yt-hover hover:bg-yt-border text-yt-text text-[11px] font-medium transition-colors";
     }
   });
 }
@@ -308,13 +405,13 @@ function toggleSidebar() {
   if (isSidebarOpen) {
     sidebarCol.classList.remove('hidden');
     videoCol.className = "lg:col-span-8 space-y-4 transition-all duration-300";
-    toggleBtn.className = "px-3 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 flex items-center space-x-1.5 transition-colors cursor-pointer text-xs font-semibold";
+    toggleBtn.className = "px-3 py-2 rounded-xl theme-primary-bg flex items-center space-x-1.5 transition-colors cursor-pointer text-xs font-semibold shadow-sm";
     toggleText.textContent = "스크립트창 닫기";
     toggleIcon.className = "fa-solid fa-list-ul";
   } else {
     sidebarCol.classList.add('hidden');
     videoCol.className = "lg:col-span-12 space-y-4 transition-all duration-300";
-    toggleBtn.className = "px-3 py-2 rounded-xl bg-yt-hover hover:bg-[#383838] text-yt-text border border-yt-border flex items-center space-x-1.5 transition-colors cursor-pointer text-xs font-semibold";
+    toggleBtn.className = "px-3 py-2 rounded-xl bg-yt-hover hover:bg-yt-border text-yt-text border border-yt-border flex items-center space-x-1.5 transition-colors cursor-pointer text-xs font-semibold";
     toggleText.textContent = "스크립트창 열기";
     toggleIcon.className = "fa-solid fa-bars-staggered";
   }
@@ -377,7 +474,7 @@ async function handleSearch(e) {
 
     // 영상 메타 세팅
     document.getElementById('videoTitle').textContent = data.video.title;
-    document.getElementById('videoUploader').innerHTML = `<i class="fa-regular fa-circle-user mr-1.5 text-red-500"></i>${data.video.uploader}`;
+    document.getElementById('videoUploader').innerHTML = `<i class="fa-regular fa-circle-user mr-1.5 theme-primary-text"></i>${data.video.uploader}`;
     document.getElementById('videoDuration').textContent = `재생시간: ${data.video.duration_str}`;
 
     // 유튜브 플레이어 생성/로드
@@ -401,7 +498,7 @@ function renderTranscript(segments, fromCache = false) {
   const countEl = document.getElementById('segmentCount');
   
   if (fromCache) {
-    countEl.innerHTML = `<span class="text-emerald-400 mr-1.5"><i class="fa-solid fa-bolt"></i> CSV 캐시 로드</span>${segments.length}개`;
+    countEl.innerHTML = `<span class="text-emerald-500 mr-1.5"><i class="fa-solid fa-bolt"></i> CSV 캐시 로드</span>${segments.length}개`;
   } else {
     countEl.textContent = `${segments.length}개`;
   }
@@ -417,10 +514,10 @@ function renderTranscript(segments, fromCache = false) {
       onclick="jumpToTime(${seg.start})" 
       class="segment-item p-2.5 rounded-xl hover:bg-yt-hover transition-all cursor-pointer flex items-start space-x-2.5 group border border-transparent hover:border-yt-border"
     >
-      <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-400 group-hover:bg-blue-900 group-hover:text-blue-300 font-mono text-xs font-semibold select-none flex-shrink-0">
+      <span class="px-2 py-0.5 rounded theme-time-badge font-mono text-xs font-semibold select-none flex-shrink-0 transition-colors">
         ${seg.time}
       </span>
-      <p class="text-xs text-yt-text group-hover:text-white leading-relaxed line-clamp-3">
+      <p class="text-xs text-yt-text leading-relaxed line-clamp-3">
         ${escapeHtml(seg.text)}
       </p>
     </div>
@@ -441,10 +538,11 @@ function highlightCurrentSegment(currentSec) {
   }
 
   if (targetSec !== -1 && targetSec !== lastHighlightedSec) {
-    document.querySelectorAll('.segment-item').forEach(el => el.classList.remove('bg-yt-hover', 'border-blue-500/50'));
+    document.querySelectorAll('.segment-item').forEach(el => el.classList.remove('theme-active-seg'));
     const el = document.getElementById(`seg-${targetSec}`);
     if (el) {
-      el.classList.add('bg-yt-hover', 'border-blue-500/50');
+      el.classList.add('theme-active-seg');
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     lastHighlightedSec = targetSec;
   }
@@ -458,12 +556,12 @@ function switchTab(tab) {
   const qaPanel = document.getElementById('qaPanel');
 
   if (tab === 'script') {
-    tabScriptBtn.className = "flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
+    tabScriptBtn.className = "flex-1 py-3 text-xs font-bold border-b-2 theme-primary-border theme-primary-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
     tabQaBtn.className = "flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-yt-subtext hover:text-yt-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
     scriptPanel.classList.remove('hidden');
     qaPanel.classList.add('hidden');
   } else {
-    tabQaBtn.className = "flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
+    tabQaBtn.className = "flex-1 py-3 text-xs font-bold border-b-2 theme-primary-border theme-primary-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
     tabScriptBtn.className = "flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-yt-subtext hover:text-yt-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
     qaPanel.classList.remove('hidden');
     scriptPanel.classList.add('hidden');
@@ -483,7 +581,7 @@ async function handleQaSubmit(e) {
   // 사용자 말풍선 추가
   chatContainer.innerHTML += `
     <div class="flex justify-end">
-      <div class="bg-blue-600 text-white p-3 rounded-xl text-xs max-w-[85%] leading-relaxed shadow">
+      <div class="theme-chat-user p-3 rounded-xl text-xs max-w-[85%] leading-relaxed shadow">
         ${escapeHtml(query)}
       </div>
     </div>
@@ -496,7 +594,7 @@ async function handleQaSubmit(e) {
   const loadingId = 'loading-' + Date.now();
   chatContainer.innerHTML += `
     <div id="${loadingId}" class="flex justify-start">
-      <div class="bg-yt-hover border border-yt-border text-yt-subtext p-3 rounded-xl text-xs flex items-center space-x-2">
+      <div class="theme-chat-ai border text-yt-subtext p-3 rounded-xl text-xs flex items-center space-x-2">
         <div class="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
         <span>Gemini 3.8 Flash가 생각 중입니다...</span>
       </div>
@@ -526,20 +624,20 @@ async function handleQaSubmit(e) {
     // [MM:SS] 타임스탬프를 클릭 가능한 점프 버튼으로 파싱
     const formattedAnswer = answer.replace(/\[?(\d{1,2}):(\d{2})\]?/g, (match, m, s) => {
       const sec = parseInt(m) * 60 + parseInt(s);
-      return `<button onclick="jumpToTime(${sec})" class="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded bg-blue-900/60 hover:bg-blue-800 text-blue-300 font-mono text-[11px] font-semibold cursor-pointer select-none">▶ ${m}:${s}</button>`;
+      return `<button onclick="jumpToTime(${sec})" class="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded theme-time-badge font-mono text-[11px] font-semibold cursor-pointer select-none">▶ ${m}:${s}</button>`;
     });
 
     chatContainer.innerHTML += `
       <div class="flex justify-start">
-        <div class="bg-yt-hover border border-yt-border text-yt-text p-3 rounded-xl text-xs max-w-[90%] leading-relaxed space-y-2">
-          <div class="flex items-center space-x-1.5 text-emerald-400 font-semibold text-[11px] mb-1">
+        <div class="theme-chat-ai border text-yt-text p-3 rounded-xl text-xs max-w-[90%] leading-relaxed space-y-2 shadow-sm">
+          <div class="flex items-center space-x-1.5 text-emerald-500 font-semibold text-[11px] mb-1">
             <i class="fa-solid fa-wand-magic-sparkles"></i>
             <span>Gemini 3.8 Flash</span>
           </div>
           <div>${formattedAnswer}</div>
           ${jumpSec !== null ? `
             <div class="pt-2 border-t border-yt-border">
-              <button onclick="jumpToTime(${jumpSec})" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer">
+              <button onclick="jumpToTime(${jumpSec})" class="w-full py-1.5 theme-primary-bg rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer shadow-sm">
                 <i class="fa-solid fa-play text-[10px]"></i>
                 <span>해당 장면으로 바로 이동 (${data.data.jump_time})</span>
               </button>
