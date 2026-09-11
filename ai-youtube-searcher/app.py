@@ -1,4 +1,4 @@
-﻿import os
+import os
 import io
 import sys
 import warnings
@@ -38,6 +38,8 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 class ProcessRequest(BaseModel):

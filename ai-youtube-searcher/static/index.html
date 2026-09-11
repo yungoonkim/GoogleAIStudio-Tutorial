@@ -4,49 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI 유튜브 검색기 | AI YouTube Searcher</title>
+  <!-- 외부 라이브러리 및 폰트 -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            yt: {
-              bg: '#0f0f0f',
-              card: '#181818',
-              hover: '#272727',
-              border: '#303030',
-              red: '#ff0000',
-              text: '#f1f1f1',
-              subtext: '#aaaaaa',
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Pretendard:wght@400;500;600;700&display=swap');
-    body {
-      font-family: 'Roboto', 'Pretendard', sans-serif;
-      background-color: #0f0f0f;
-      color: #f1f1f1;
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #181818;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #3f3f3f;
-      border-radius: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #555555;
-    }
-  </style>
+  
+  <!-- 커스텀 스타일 (CSS 분리) -->
+  <link rel="stylesheet" href="/static/style.css">
+  
+  <!-- 커스텀 자바스크립트 (JS 분리) -->
+  <script src="/static/script.js"></script>
+  
   <!-- YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api"></script>
 </head>
@@ -144,72 +111,156 @@
     </div>
 
     <!-- 영상 및 어시스턴트 메인 레이아웃 (좌측 영상 + 우측 AI 패널) -->
-    <div id="contentLayout" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div id="contentLayout" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-      <!-- ================= 좌측: 비디오 플레이어 & 컨트롤 ================= -->
-      <div class="lg:col-span-8 space-y-4">
+      <!-- ================= 좌측: 비디오 플레이어 & 오버레이 컨트롤 ================= -->
+      <div id="videoCol" class="lg:col-span-8 space-y-4 transition-all duration-300">
         
-        <!-- 유튜브 IFrame 임베드 컨테이너 -->
-        <div class="w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl border border-yt-border relative group">
-          <div id="player" class="w-full h-full"></div>
-        </div>
+        <!-- 유튜브 IFrame 임베드 컨테이너 (완전 자동 감춤 커스텀 플레이어) -->
+        <div 
+          id="videoContainer" 
+          class="w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl border border-yt-border relative group select-none"
+          onmouseenter="handleVideoMouseEnter()"
+          onmousemove="handleVideoMouseMove()"
+          onmouseleave="handleVideoMouseLeave()"
+        >
+          <!-- 유튜브 IFrame 플레이어 (controls: 0으로 순수 비디오만 렌더링) -->
+          <div id="player" class="w-full h-full pointer-events-auto"></div>
 
-        <!-- 커스텀 플레이어 컨트롤바 (음향 크기 조절 등) -->
-        <div class="bg-yt-card border border-yt-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-4">
-          
-          <!-- 재생/일시정지 & 시간 -->
-          <div class="flex items-center space-x-3">
-            <button 
-              id="playPauseBtn" 
-              onclick="togglePlay()" 
-              class="w-9 h-9 rounded-full bg-yt-hover hover:bg-[#383838] flex items-center justify-center text-yt-text transition-colors cursor-pointer"
-              title="재생/일시정지"
+          <!-- 중앙 재생/일시정지 클릭 감지 투명 레이어 -->
+          <div 
+            class="absolute inset-0 z-10 cursor-pointer" 
+            onclick="togglePlay()"
+          ></div>
+
+          <!-- 🟡 커스텀 통합 컨트롤 오버레이 바 (마우스 호버 시에만 100% 디스플레이) -->
+          <div 
+            id="videoOverlayBar" 
+            class="absolute bottom-0 left-0 right-0 z-20 p-3 pt-6 bg-gradient-to-t from-black/95 via-black/70 to-transparent opacity-0 pointer-events-none transition-all duration-300 transform translate-y-2 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 flex flex-col gap-2"
+            onmouseenter="handleBarMouseEnter()"
+            onmouseleave="handleBarMouseLeave()"
+          >
+            <!-- 1. 커스텀 프로그레스바 (타임라인 탐색) -->
+            <div 
+              id="progressBarContainer" 
+              class="w-full h-2 bg-white/20 hover:h-3 rounded-full cursor-pointer relative transition-all flex items-center"
+              onclick="handleProgressClick(event)"
             >
-              <i id="playIcon" class="fa-solid fa-play text-sm"></i>
-            </button>
-            <span id="timeDisplay" class="text-xs font-mono text-yt-subtext">
-              00:00 / 00:00
-            </span>
+              <div id="progressBar" class="h-full bg-red-600 rounded-full relative w-0 transition-[width] duration-100">
+                <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-red-500 rounded-full shadow-md scale-0 group-hover:scale-100 transition-transform"></div>
+              </div>
+            </div>
+
+            <!-- 2. 하단 컨트롤러 행 (재생/시간 + 자막/톱니바퀴/스크립트/전체화면) -->
+            <div class="flex items-center justify-between gap-3 text-white text-xs">
+              
+              <!-- 좌측: 재생/일시정지 버튼 & 현재/총 시간 -->
+              <div class="flex items-center space-x-3">
+                <button 
+                  id="playPauseBtn" 
+                  onclick="togglePlay()" 
+                  class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+                  title="재생/일시정지"
+                >
+                  <i id="playIcon" class="fa-solid fa-play text-xs"></i>
+                </button>
+                <span id="timeDisplay" class="font-mono text-[11px] text-yt-subtext whitespace-nowrap">
+                  00:00 / 00:00
+                </span>
+              </div>
+
+              <!-- 우측: 자막, 톱니바퀴 설정, 스크립트창 토글, 전체화면 버튼 -->
+              <div class="flex items-center space-x-2 relative">
+                
+                <!-- 1. 자막(CC) 토글 버튼 -->
+                <button 
+                  id="captionsBtn" 
+                  onclick="toggleCaptions()" 
+                  class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-yt-subtext hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                  title="자막 켜기/끄기"
+                >
+                  <i class="fa-solid fa-closed-captioning text-sm"></i>
+                </button>
+
+                <!-- 2. 톱니바퀴 설정 버튼 & 팝업 래퍼 -->
+                <div class="relative">
+                  <button 
+                    id="settingsBtn" 
+                    onclick="toggleSettingsMenu(event)" 
+                    class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-yt-subtext hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    title="설정 (재생 속도 등)"
+                  >
+                    <i class="fa-solid fa-gear text-xs transition-transform duration-200" id="gearIcon"></i>
+                  </button>
+
+                  <!-- 톱니바퀴 바로 위에서 열리는 설정 팝업 메뉴 (ESC / 외부 클릭 닫기) -->
+                  <div 
+                    id="settingsMenu" 
+                    class="hidden absolute bottom-full right-0 mb-3 w-60 bg-[#1e1e1e]/95 backdrop-blur-md border border-[#3f3f3f] rounded-2xl shadow-2xl p-3 z-50 menu-popup text-xs space-y-3"
+                  >
+                    <div class="flex items-center justify-between pb-2 border-b border-yt-border">
+                      <span class="font-bold text-yt-text flex items-center">
+                        <i class="fa-solid fa-sliders text-red-500 mr-1.5"></i>영상 설정
+                      </span>
+                      <span class="text-[10px] text-yt-subtext bg-[#2b2b2b] px-1.5 py-0.5 rounded border border-[#383838]">ESC 닫기</span>
+                    </div>
+
+                    <!-- 재생 속도 설정 -->
+                    <div>
+                      <div class="text-yt-subtext mb-1.5 font-medium flex items-center justify-between">
+                        <span>재생 속도</span>
+                        <span id="currentSpeedLabel" class="text-white font-bold">1.0x (기본)</span>
+                      </div>
+                      <div class="grid grid-cols-3 gap-1.5">
+                        <button onclick="setSpeed(0.5)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">0.5x</button>
+                        <button onclick="setSpeed(0.75)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">0.75x</button>
+                        <button onclick="setSpeed(1.0)" class="speed-btn py-1.5 rounded-lg bg-red-600 text-white text-[11px] font-bold transition-colors">1.0x</button>
+                        <button onclick="setSpeed(1.25)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">1.25x</button>
+                        <button onclick="setSpeed(1.5)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">1.5x</button>
+                        <button onclick="setSpeed(2.0)" class="speed-btn py-1.5 rounded-lg bg-[#2b2b2b] hover:bg-[#383838] text-yt-text text-[11px] font-medium transition-colors">2.0x</button>
+                      </div>
+                    </div>
+
+                    <!-- 부가 기능 토글 -->
+                    <div class="pt-2 border-t border-yt-border space-y-2">
+                      <label class="flex items-center justify-between cursor-pointer py-1">
+                        <span class="text-yt-text text-[11px]">대사 자동 동기화 스크롤</span>
+                        <input type="checkbox" id="autoScrollCheck" checked class="accent-red-600 cursor-pointer">
+                      </label>
+                      <label class="flex items-center justify-between cursor-pointer py-1">
+                        <span class="text-yt-text text-[11px]">구간 자동 반복</span>
+                        <input type="checkbox" id="loopCheck" onchange="toggleLoop(this.checked)" class="accent-red-600 cursor-pointer">
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3. 스크립트창 열기/닫기 -->
+                <button 
+                  id="toggleSidebarBtn" 
+                  onclick="toggleSidebar()" 
+                  class="px-3 py-1.5 rounded-lg bg-red-600/90 hover:bg-red-600 text-white flex items-center space-x-1.5 transition-colors cursor-pointer text-xs font-semibold shadow"
+                  title="타임라인 스크립트창 열기/닫기"
+                >
+                  <i id="toggleSidebarIcon" class="fa-solid fa-list-ul text-[11px]"></i>
+                  <span id="toggleSidebarText" class="hidden sm:inline">스크립트창 닫기</span>
+                </button>
+
+                <!-- 4. 전체화면 토글 -->
+                <button 
+                  id="fullscreenBtn" 
+                  onclick="toggleFullscreen()" 
+                  class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+                  title="전체화면"
+                >
+                  <i id="fullscreenIcon" class="fa-solid fa-expand text-xs"></i>
+                </button>
+              </div>
+
+            </div>
+
           </div>
 
-          <!-- 음향(볼륨) 크기 조절 슬라이더 -->
-          <div class="flex items-center space-x-2">
-            <button 
-              id="muteBtn" 
-              onclick="toggleMute()" 
-              class="text-yt-subtext hover:text-white transition-colors cursor-pointer"
-              title="음소거"
-            >
-              <i id="volumeIcon" class="fa-solid fa-volume-high text-sm"></i>
-            </button>
-            <input 
-              type="range" 
-              id="volumeSlider" 
-              min="0" 
-              max="100" 
-              value="100" 
-              oninput="handleVolumeChange(this.value)"
-              class="w-24 sm:w-32 accent-red-600 bg-yt-border h-1.5 rounded-lg cursor-pointer"
-            >
-            <span id="volumeValue" class="text-xs font-mono text-yt-subtext w-8 text-right">100%</span>
-          </div>
-
-          <!-- 키워드 빠른 검색창 (특정 위치로 바로 이동) -->
-          <div class="flex-grow max-w-xs relative flex items-center">
-            <input 
-              type="text" 
-              id="quickSearchInput" 
-              placeholder="대사/단어 검색 (즉시 점프)..." 
-              onkeydown="if(event.key==='Enter') executeQuickSearch()"
-              class="w-full bg-[#121212] border border-yt-border text-yt-text text-xs rounded-lg py-2 pl-3 pr-8 focus:border-red-500 focus:outline-none transition-colors"
-            >
-            <button 
-              onclick="executeQuickSearch()" 
-              class="absolute right-2 text-yt-subtext hover:text-white text-xs cursor-pointer"
-            >
-              <i class="fa-solid fa-location-crosshairs"></i>
-            </button>
-          </div>
         </div>
 
         <!-- 영상 메타데이터 정보 -->
@@ -226,25 +277,35 @@
       </div>
 
       <!-- ================= 우측: AI 사이드바 (타임라인 & Q&A) ================= -->
-      <div class="lg:col-span-4 bg-yt-card border border-yt-border rounded-2xl flex flex-col h-[650px] shadow-xl overflow-hidden">
+      <div id="sidebarCol" class="lg:col-span-4 bg-yt-card border border-yt-border rounded-2xl flex flex-col h-[650px] shadow-xl overflow-hidden transition-all duration-300">
         
-        <!-- 탭 네비게이션 헤더 -->
-        <div class="flex border-b border-yt-border bg-[#141414]">
+        <!-- 탭 네비게이션 헤더 & 우측 닫기 버튼 -->
+        <div class="flex items-center justify-between border-b border-yt-border bg-[#141414] pr-2">
+          <div class="flex flex-grow">
+            <button 
+              id="tabScriptBtn" 
+              onclick="switchTab('script')" 
+              class="flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+            >
+              <i class="fa-solid fa-list-ul"></i>
+              <span>타임라인 스크립트</span>
+            </button>
+            <button 
+              id="tabQaBtn" 
+              onclick="switchTab('qa')" 
+              class="flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-yt-subtext hover:text-yt-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i>
+              <span>Gemini 3.8 Q&A</span>
+            </button>
+          </div>
+          <!-- 사이드바 패널 상단 빠른 닫기 버튼 -->
           <button 
-            id="tabScriptBtn" 
-            onclick="switchTab('script')" 
-            class="flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+            onclick="toggleSidebar()" 
+            title="스크립트 패널 닫기"
+            class="p-2 text-yt-subtext hover:text-white hover:bg-yt-hover rounded-lg transition-colors cursor-pointer text-xs ml-1"
           >
-            <i class="fa-solid fa-list-ul"></i>
-            <span>타임라인 스크립트</span>
-          </button>
-          <button 
-            id="tabQaBtn" 
-            onclick="switchTab('qa')" 
-            class="flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-yt-subtext hover:text-yt-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
-          >
-            <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i>
-            <span>Gemini 3.8 Q&A</span>
+            <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
 
@@ -304,386 +365,5 @@
     AI YouTube Searcher &copy; 2026. Built with YouTube Iframe API & Google Gemini 3.5/3.8 Flash.
   </footer>
 
-  <!-- ================= 자바스크립트 로직 ================= -->
-  <script>
-    let player = null;
-    let isPlayerReady = false;
-    let currentVideoId = '';
-    let currentSegments = [];
-    let currentVideoTitle = '';
-    let timeUpdateInterval = null;
-
-    // YouTube IFrame API 준비 완료 콜백
-    function onYouTubeIframeAPIReady() {
-      console.log("YouTube IFrame API Ready");
-    }
-
-    function initPlayer(videoId) {
-      if (player) {
-        player.loadVideoById(videoId);
-        return;
-      }
-
-      player = new YT.Player('player', {
-        videoId: videoId,
-        playerVars: {
-          autoplay: 1,
-          controls: 1,
-          rel: 0,
-          modestbranding: 1
-        },
-        events: {
-          'onReady': onPlayerReady,
-          'onStateChange': onPlayerStateChange
-        }
-      });
-    }
-
-    function onPlayerReady(event) {
-      isPlayerReady = true;
-      event.target.playVideo();
-      startTimeTracker();
-    }
-
-    function onPlayerStateChange(event) {
-      const playIcon = document.getElementById('playIcon');
-      if (event.data === YT.PlayerState.PLAYING) {
-        playIcon.className = "fa-solid fa-pause text-sm";
-      } else {
-        playIcon.className = "fa-solid fa-play text-sm";
-      }
-    }
-
-    function startTimeTracker() {
-      if (timeUpdateInterval) clearInterval(timeUpdateInterval);
-      timeUpdateInterval = setInterval(() => {
-        if (!player || !isPlayerReady) return;
-        try {
-          const current = Math.floor(player.getCurrentTime() || 0);
-          const total = Math.floor(player.getDuration() || 0);
-          document.getElementById('timeDisplay').textContent = `${formatTime(current)} / ${formatTime(total)}`;
-          highlightCurrentSegment(current);
-        } catch (e) {}
-      }, 500);
-    }
-
-    function formatTime(secs) {
-      const m = Math.floor(secs / 60);
-      const s = Math.floor(secs % 60);
-      return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-    }
-
-    // 재생 및 일시정지
-    function togglePlay() {
-      if (!player || !isPlayerReady) return;
-      const state = player.getPlayerState();
-      if (state === YT.PlayerState.PLAYING) {
-        player.pauseVideo();
-      } else {
-        player.playVideo();
-      }
-    }
-
-    // 음향(볼륨) 조절
-    function handleVolumeChange(val) {
-      if (!player || !isPlayerReady) return;
-      player.setVolume(val);
-      document.getElementById('volumeValue').textContent = `${val}%`;
-      const volIcon = document.getElementById('volumeIcon');
-      if (val == 0) {
-        volIcon.className = "fa-solid fa-volume-xmark text-sm";
-      } else if (val < 50) {
-        volIcon.className = "fa-solid fa-volume-low text-sm";
-      } else {
-        volIcon.className = "fa-solid fa-volume-high text-sm";
-      }
-    }
-
-    function toggleMute() {
-      if (!player || !isPlayerReady) return;
-      if (player.isMuted()) {
-        player.unMute();
-        handleVolumeChange(player.getVolume());
-      } else {
-        player.mute();
-        document.getElementById('volumeIcon').className = "fa-solid fa-volume-xmark text-sm";
-        document.getElementById('volumeValue').textContent = "0%";
-      }
-    }
-
-    // 특정 시간으로 점프하고 영상 자동 재생
-    function jumpToTime(seconds) {
-      if (!player || !isPlayerReady) return;
-      player.seekTo(seconds, true);
-      player.playVideo();
-      console.log(`Jump to: ${seconds}s and auto-playing`);
-    }
-
-    // 클립보드 붙여넣기
-    async function pasteUrl() {
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text) document.getElementById('urlInput').value = text;
-      } catch (err) {
-        alert('클립보드 접근 권한이 필요합니다.');
-      }
-    }
-
-    // 샘플 링크 로드
-    function loadSampleVideo(sampleUrl) {
-      document.getElementById('urlInput').value = sampleUrl;
-      handleSearch(new Event('submit'));
-    }
-
-    // 검색 실행 (오디오 다운로드 + STT 전사 파이프라인)
-    async function handleSearch(e) {
-      if (e) e.preventDefault();
-      const url = document.getElementById('urlInput').value.trim();
-      if (!url) return;
-
-      const statusAlert = document.getElementById('statusAlert');
-      const emptyPlaceholder = document.getElementById('emptyPlaceholder');
-      const contentLayout = document.getElementById('contentLayout');
-      const searchBtn = document.getElementById('searchBtn');
-
-      searchBtn.disabled = true;
-      statusAlert.classList.remove('hidden');
-
-      try {
-        const res = await fetch('/api/process', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: url })
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || "영상 분석에 실패했습니다.");
-
-        emptyPlaceholder.classList.add('hidden');
-        contentLayout.classList.remove('hidden');
-
-        currentVideoId = data.video.id;
-        currentVideoTitle = data.video.title;
-        currentSegments = data.segments || [];
-
-        // 영상 메타 세팅
-        document.getElementById('videoTitle').textContent = data.video.title;
-        document.getElementById('videoUploader').innerHTML = `<i class="fa-regular fa-circle-user mr-1.5 text-red-500"></i>${data.video.uploader}`;
-        document.getElementById('videoDuration').textContent = `재생시간: ${data.video.duration_str}`;
-
-        // 유튜브 플레이어 생성/로드
-        initPlayer(currentVideoId);
-
-        // 스크립트 렌더링
-        renderTranscript(currentSegments, data.from_cache);
-
-        statusAlert.classList.add('hidden');
-      } catch (err) {
-        alert(err.message);
-        statusAlert.classList.add('hidden');
-      } finally {
-        searchBtn.disabled = false;
-      }
-    }
-
-    // 트랜스크립트 렌더링
-    function renderTranscript(segments, fromCache = false) {
-      const container = document.getElementById('transcriptList');
-      const countEl = document.getElementById('segmentCount');
-      
-      if (fromCache) {
-        countEl.innerHTML = `<span class="text-emerald-400 mr-1.5"><i class="fa-solid fa-bolt"></i> CSV 캐시 로드</span>${segments.length}개`;
-      } else {
-        countEl.textContent = `${segments.length}개`;
-      }
-
-      if (!segments || segments.length === 0) {
-        container.innerHTML = '<div class="text-center py-8 text-yt-subtext text-xs">추출된 발화 내용이 없습니다.</div>';
-        return;
-      }
-
-      container.innerHTML = segments.map((seg, idx) => `
-        <div 
-          id="seg-${seg.start}" 
-          onclick="jumpToTime(${seg.start})" 
-          class="segment-item p-2.5 rounded-xl hover:bg-yt-hover transition-all cursor-pointer flex items-start space-x-2.5 group border border-transparent hover:border-yt-border"
-        >
-          <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-400 group-hover:bg-blue-900 group-hover:text-blue-300 font-mono text-xs font-semibold select-none flex-shrink-0">
-            ${seg.time}
-          </span>
-          <p class="text-xs text-yt-text group-hover:text-white leading-relaxed line-clamp-3">
-            ${escapeHtml(seg.text)}
-          </p>
-        </div>
-      `).join('');
-    }
-
-    // 현재 시간에 맞춘 세그먼트 하이라이트
-    let lastHighlightedSec = -1;
-    function highlightCurrentSegment(currentSec) {
-      if (!currentSegments || currentSegments.length === 0) return;
-      let targetSec = -1;
-      for (let i = 0; i < currentSegments.length; i++) {
-        if (currentSegments[i].start <= currentSec) {
-          targetSec = currentSegments[i].start;
-        } else {
-          break;
-        }
-      }
-
-      if (targetSec !== -1 && targetSec !== lastHighlightedSec) {
-        document.querySelectorAll('.segment-item').forEach(el => el.classList.remove('bg-yt-hover', 'border-blue-500/50'));
-        const el = document.getElementById(`seg-${targetSec}`);
-        if (el) {
-          el.classList.add('bg-yt-hover', 'border-blue-500/50');
-        }
-        lastHighlightedSec = targetSec;
-      }
-    }
-
-    // 키워드 빠른 검색 및 자동 점프
-    function executeQuickSearch() {
-      const query = document.getElementById('quickSearchInput').value.trim().toLowerCase();
-      if (!query || currentSegments.length === 0) return;
-
-      const found = currentSegments.find(s => s.text.toLowerCase().includes(query));
-      if (found) {
-        jumpToTime(found.start);
-        const el = document.getElementById(`seg-${found.start}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        alert(`'${query}'에 해당하는 대사를 찾을 수 없습니다.`);
-      }
-    }
-
-    // 탭 전환
-    function switchTab(tab) {
-      const tabScriptBtn = document.getElementById('tabScriptBtn');
-      const tabQaBtn = document.getElementById('tabQaBtn');
-      const scriptPanel = document.getElementById('scriptPanel');
-      const qaPanel = document.getElementById('qaPanel');
-
-      if (tab === 'script') {
-        tabScriptBtn.className = "flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
-        tabQaBtn.className = "flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-yt-subtext hover:text-yt-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
-        scriptPanel.classList.remove('hidden');
-        qaPanel.classList.add('hidden');
-      } else {
-        tabQaBtn.className = "flex-1 py-3 text-xs font-bold border-b-2 border-red-600 text-white flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
-        tabScriptBtn.className = "flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-yt-subtext hover:text-yt-text flex items-center justify-center space-x-1.5 transition-colors cursor-pointer";
-        qaPanel.classList.remove('hidden');
-        scriptPanel.classList.add('hidden');
-      }
-    }
-
-    // Gemini 3.8 Flash Q&A 전송 처리
-    async function handleQaSubmit(e) {
-      e.preventDefault();
-      const input = document.getElementById('qaInput');
-      const query = input.value.trim();
-      if (!query || currentSegments.length === 0) return;
-
-      const chatContainer = document.getElementById('chatMessages');
-      const sendBtn = document.getElementById('qaSendBtn');
-
-      // 사용자 말풍선 추가
-      chatContainer.innerHTML += `
-        <div class="flex justify-end">
-          <div class="bg-blue-600 text-white p-3 rounded-xl text-xs max-w-[85%] leading-relaxed shadow">
-            ${escapeHtml(query)}
-          </div>
-        </div>
-      `;
-      input.value = '';
-      sendBtn.disabled = true;
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-
-      // AI 로딩 말풍선
-      const loadingId = 'loading-' + Date.now();
-      chatContainer.innerHTML += `
-        <div id="${loadingId}" class="flex justify-start">
-          <div class="bg-yt-hover border border-yt-border text-yt-subtext p-3 rounded-xl text-xs flex items-center space-x-2">
-            <div class="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
-            <span>Gemini 3.8 Flash가 생각 중입니다...</span>
-          </div>
-        </div>
-      `;
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-
-      try {
-        const res = await fetch('/api/qa', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: query,
-            video_title: currentVideoTitle,
-            segments: currentSegments
-          })
-        });
-
-        const data = await res.json();
-        document.getElementById(loadingId).remove();
-
-        if (!res.ok) throw new Error(data.detail || "답변을 가져오지 못했습니다.");
-
-        const answer = data.data.answer;
-        const jumpSec = data.data.jump_sec;
-
-        // [MM:SS] 타임스탬프를 클릭 가능한 점프 버튼으로 파싱
-        const formattedAnswer = answer.replace(/\[?(\d{1,2}):(\d{2})\]?/g, (match, m, s) => {
-          const sec = parseInt(m) * 60 + parseInt(s);
-          return `<button onclick="jumpToTime(${sec})" class="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded bg-blue-900/60 hover:bg-blue-800 text-blue-300 font-mono text-[11px] font-semibold cursor-pointer select-none">▶ ${m}:${s}</button>`;
-        });
-
-        chatContainer.innerHTML += `
-          <div class="flex justify-start">
-            <div class="bg-yt-hover border border-yt-border text-yt-text p-3 rounded-xl text-xs max-w-[90%] leading-relaxed space-y-2">
-              <div class="flex items-center space-x-1.5 text-emerald-400 font-semibold text-[11px] mb-1">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <span>Gemini 3.8 Flash</span>
-              </div>
-              <div>${formattedAnswer}</div>
-              ${jumpSec !== null ? `
-                <div class="pt-2 border-t border-yt-border">
-                  <button onclick="jumpToTime(${jumpSec})" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer">
-                    <i class="fa-solid fa-play text-[10px]"></i>
-                    <span>해당 장면으로 바로 이동 (${data.data.jump_time})</span>
-                  </button>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `;
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-
-        // 만약 AI가 시간대를 찾았다면 바로 이동 안내
-        if (jumpSec !== null) {
-          jumpToTime(jumpSec);
-        }
-
-      } catch (err) {
-        document.getElementById(loadingId).remove();
-        chatContainer.innerHTML += `
-          <div class="flex justify-start">
-            <div class="bg-red-950/60 border border-red-800 text-red-300 p-3 rounded-xl text-xs max-w-[85%]">
-              ❌ 오류: ${escapeHtml(err.message)}
-            </div>
-          </div>
-        `;
-      } finally {
-        sendBtn.disabled = false;
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-    }
-
-    function escapeHtml(text) {
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-  </script>
 </body>
 </html>
